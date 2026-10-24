@@ -1,26 +1,120 @@
 @import "tailwindcss";
 
+@custom-variant dark (&:where(.dark, .dark *));
+
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --bg: #fafaf9;
+  --surface: #ffffff;
+  --surface-2: #f3f2f0;
+  --line: #e7e5e2;
+  --fg: #1c1917;
+  --muted: #78716c;
+  --accent: #b45309;
+  --accent-fg: #ffffff;
+  --accent-soft: #fdf3e1;
+  --success: #15803d;
+  --danger: #dc2626;
+  --shadow: 0 1px 2px rgb(28 25 23 / 0.04), 0 4px 16px rgb(28 25 23 / 0.04);
+  color-scheme: light;
+}
+
+.dark {
+  --bg: #0d0c0b;
+  --surface: #161514;
+  --surface-2: #201e1c;
+  --line: #2b2826;
+  --fg: #f5f4f2;
+  --muted: #a39d97;
+  --accent: #f0a63a;
+  --accent-fg: #1c1206;
+  --accent-soft: #33240e;
+  --success: #4ade80;
+  --danger: #f87171;
+  --shadow: 0 1px 2px rgb(0 0 0 / 0.3);
+  color-scheme: dark;
 }
 
 @theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
+  --color-bg: var(--bg);
+  --color-surface: var(--surface);
+  --color-surface-2: var(--surface-2);
+  --color-line: var(--line);
+  --color-fg: var(--fg);
+  --color-muted: var(--muted);
+  --color-accent: var(--accent);
+  --color-accent-fg: var(--accent-fg);
+  --color-accent-soft: var(--accent-soft);
+  --color-success: var(--success);
+  --color-danger: var(--danger);
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
+  --font-serif: var(--font-serif-display);
+  --shadow-soft: var(--shadow);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+html {
+  -webkit-tap-highlight-color: transparent;
 }
 
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  background: var(--bg);
+  color: var(--fg);
+}
+
+::selection {
+  background: var(--accent-soft);
+}
+
+input,
+textarea,
+select {
+  font-size: 16px; /* prevents iOS zoom on focus */
+}
+
+@media (min-width: 640px) {
+  input,
+  textarea,
+  select {
+    font-size: 14px;
+  }
+}
+
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+.no-scrollbar {
+  scrollbar-width: none;
+}
+
+@keyframes rise {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+.animate-rise {
+  animation: rise 0.25s ease-out both;
+}
+
+@keyframes pop {
+  0% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.18);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+.animate-pop {
+  animation: pop 0.25s ease-out;
+}
+
+.pb-safe {
+  padding-bottom: env(safe-area-inset-bottom);
 }
