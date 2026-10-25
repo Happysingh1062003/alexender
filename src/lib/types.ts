@@ -8,19 +8,13 @@ export interface Task {
   priority: Priority;
   time?: string; // HH:MM
   createdAt: number;
+  /** Last edit time — newest edit wins when devices sync. */
+  updatedAt?: number;
   completedAt?: number;
-  focusMin?: number;
-  routineId?: string;
-}
-
-export interface Routine {
-  id: string;
-  title: string;
-  priority: Priority;
-  time?: string;
-  days: number[]; // 0 = Sunday
-  active: boolean;
-  createdAt: number;
+  /** Set when the task is explicitly started; makes time-spent exact. */
+  startedAt?: number;
+  /** Minutes spent, filled in automatically on completion (editable). */
+  spentMin?: number;
 }
 
 export interface DayLog {
@@ -28,16 +22,17 @@ export interface DayLog {
   total: number;
   done: number;
   pct: number;
-  focusMin?: number;
-  mood?: number; // 1-5
-  wins?: string;
-  lesson?: string;
+  /** First time Alexender was opened that day — the fallback start for time tracking. */
+  firstSeen?: number;
 }
 
-export interface Step {
+export interface Mission {
   id: string;
-  title: string;
-  done: boolean;
+  text: string;
+  images: string[];
+  createdAt: number;
+  /** Last edit time — newest edit wins when devices sync. */
+  updatedAt?: number;
 }
 
 export interface Goal {
@@ -46,10 +41,11 @@ export interface Goal {
   why: string;
   deadline?: string;
   images: string[];
-  steps: Step[];
   achieved: boolean;
   achievedAt?: number;
   createdAt: number;
+  /** Last edit time — newest edit wins when devices sync. */
+  updatedAt?: number;
 }
 
 export interface Video {
@@ -58,11 +54,15 @@ export interface Video {
   youtubeId: string;
   title: string;
   channel?: string;
+  durationSec?: number;
+  views?: number;
+  published?: string;
   done: boolean;
   completedAt?: number;
   createdAt: number;
+  /** Last edit time — newest edit wins when devices sync. */
+  updatedAt?: number;
   order: number;
-  learningId?: string;
 }
 
 export interface Book {
@@ -76,55 +76,27 @@ export interface Book {
   done: boolean;
   completedAt?: number;
   createdAt: number;
+  /** Last edit time — newest edit wins when devices sync. */
+  updatedAt?: number;
   order: number;
-  learningId?: string;
 }
 
-export type LearningSource = "life" | "video" | "book" | "plan" | "day";
-
-export interface Learning {
-  id: string;
-  text: string;
-  source: LearningSource;
-  refTitle?: string;
-  tags: string[];
-  starred: boolean;
+export interface JournalEntry {
   date: string;
-  createdAt: number;
+  text: string;
+  updatedAt: number;
 }
-
-export type PlanStatus = "idea" | "active" | "done";
-
-export interface Plan {
-  id: string;
-  title: string;
-  description: string;
-  coverId?: string;
-  images: string[];
-  steps: Step[];
-  notes: string;
-  status: PlanStatus;
-  targetDate?: string;
-  createdAt: number;
-}
-
-export type Theme = "system" | "light" | "dark";
 
 export interface Settings {
   name: string;
   winThreshold: number;
-  theme: Theme;
-  mission: string;
-  missionImages: string[];
-  focusMinutes: number;
-  breakMinutes: number;
-}
-
-export interface FocusState {
-  taskId?: string;
-  label: string;
-  mode: "focus" | "break";
-  durationMin: number;
-  endsAt: number;
-  pausedRemainingMs?: number;
+  birthDate: string; // YYYY-MM-DD
+  country: string;
+  /** Overrides the country average when set. */
+  lifeExpectancy?: number;
+  /** Device passcode, stored only as a salted hash. */
+  lock?: { salt: string; hash: string; length: number };
+  /** Legacy single mission, migrated into `missions`. */
+  mission?: string;
+  updatedAt?: number;
 }

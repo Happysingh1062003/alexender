@@ -1,24 +1,43 @@
 "use client";
 
-import { ArrowDown, ArrowUp, Check, Lightbulb, Play, RotateCcw, SquarePlay, Trash2, X } from "lucide-react";
+import { Play } from "lucide-react";
 import { useEffect, useState } from "react";
-import { LearnModal } from "@/components/LearnModal";
-import { Button, Card, Empty, IconButton, Input, PageHeader, Segmented } from "@/components/ui";
+import { DoneRow, DoneSection, QueueRow } from "@/components/Queue";
+import { Modal, ProgressBar, SectionTop } from "@/components/ui";
 import { addVideoFromUrl, fetchVideoTitle, PENDING_TITLE } from "@/lib/capture";
-import { formatShort, toKey } from "@/lib/date";
+import { formatShort } from "@/lib/date";
 import { useStore } from "@/lib/store";
 import type { Video } from "@/lib/types";
-import { cn, ytThumb } from "@/lib/utils";
+import { formatCount, formatDuration, formatMinutes, ytThumb } from "@/lib/utils";
+
+/** "Rick Astley · 1.8B views · 24 Oct 2009" */
+const details = (v: Video) =>
+  [v.channel, v.views && `${formatCount(v.views)} views`, v.published && `${formatShort(v.published)} ${v.published.slice(0, 4)}`]
+    .filter(Boolean)
+    .join(" · ");
+
+function Thumb({ video, onPlay }: { video: Video; onPlay?: () => void }) {
+  return (
+    <button onClick={onPlay} disabled={!onPlay} aria-label={`Play ${video.title}`} className="group/thumb relative shrink-0 overflow-hidden rounded-lg">
+      {/* eslint-disable-next-line @next/next/no-img-element */}
+      <img src={ytThumb(video.youtubeId)} alt="" className="aspect-video w-28 object-cover" />
+      {onPlay && (
+        <span className="absolute inset-0 flex items-center justify-center bg-black/30 opacity-0 transition-opacity group-hover/thumb:opacity-100">
+          <Play className="size-5 fill-white text-white" />
+        </span>
+      )}
+      {video.durationSec && (
+        <span className="absolute right-1 bottom-1 rounded bg-black/80 px-1 font-mono text-[10px] text-white">{formatDuration(video.durationSec)}</span>
+      )}
+    </button>
+  );
+}
 
 export default function VideosPage() {
   const videos = useStore((s) => s.videos);
-  const learnings = useStore((s) => s.learnings);
-  const completeVideo = useStore((s) => s.completeVideo);
-  const [tab, setTab] = useState<"queue" | "done">("queue");
-  const [url, setUrl] = useState("");
+  const { completeVideo, moveVideo, deleteVideo, reopenVideo, updateVideo } = useStore.getState();
   const [error, setError] = useState("");
-  const [playing, setPlaying] = useState<string | null>(null);
-  const [completing, setCompleting] = useState<Video | null>(null);
+  const [playing, setPlaying] = useState<Video | null>(null);
 
   useEffect(() => {
     videos.filter((v) => v.title === PENDING_TITLE).forEach((v) => fetchVideoTitle(v.id));
@@ -26,155 +45,74 @@ export default function VideosPage() {
 
   const queue = videos.filter((v) => !v.done).sort((a, b) => a.order - b.order);
   const done = videos.filter((v) => v.done).sort((a, b) => (b.completedAt ?? 0) - (a.completedAt ?? 0));
-  const total = videos.length;
+  const leftMin = queue.reduce((s, v) => s + (v.durationSec ?? 0), 0) / 60;
 
   return (
-    <div className="animate-rise">
-      <PageHeader
-        title="Videos"
-        subtitle={total ? `${done.length} of ${total} watched — learn in sequence.` : "Your curriculum, one video at a time."}
+    <div className="mx-auto max-w-xl">
+      <SectionTop
+        label="Videos"
+        actions={[
+          {
+            label: "Add video",
+            placeholder: "Paste a YouTube link",
+            keepOpen: true,
+            onAdd: (url) => {
+              const result = addVideoFromUrl(url);
+              setError(result === "invalid" ? "That isn't a YouTube link." : result === "duplicate" ? "That video is already in your list." : "");
+            },
+          },
+        ]}
       />
+      {error && <p className="-mt-6 mb-6 text-center text-[12px] text-danger">{error}</p>}
 
-      <form
-        className="mb-2 flex gap-2"
-        onSubmit={(e) => {
-          e.preventDefault();
-          if (!url.trim()) return;
-          const ok = addVideoFromUrl(url);
-          setError(ok ? "" : "That doesn't look like a YouTube link.");
-          if (ok) {
-            setUrl("");
-            setTab("queue");
-          }
-        }}
-      >
-        <Input value={url} onChange={(e) => setUrl(e.target.value)} placeholder="Paste a YouTube link…" inputMode="url" />
-        <Button disabled={!url.trim()}>Add</Button>
-      </form>
-      {error && <p className="mb-2 text-xs text-danger">{error}</p>}
-
-      {total > 0 && (
-        <div className="mt-4 mb-4 flex items-center justify-between gap-3">
-          <Segmented
-            value={tab}
-            onChange={setTab}
-            options={[
-              { value: "queue", label: `Up next · ${queue.length}` },
-              { value: "done", label: `Completed · ${done.length}` },
-            ]}
-          />
-          <div className="hidden w-40 sm:block">
-            <div className="h-1.5 overflow-hidden rounded-full bg-surface-2">
-              <div className="h-full bg-accent" style={{ width: `${(done.length / total) * 100}%` }} />
-            </div>
-          </div>
+      {videos.length > 0 && (
+        <div className="mx-auto mb-10 max-w-[240px] text-center">
+          <ProgressBar value={(done.length / videos.length) * 100} />
+          <p className="mt-2.5 font-mono text-[12px] text-faint tabular-nums">
+            <span className="text-fg">{done.length}</span>/{videos.length} watched{leftMin > 0 && ` · ${formatMinutes(leftMin)} left`}
+          </p>
         </div>
       )}
 
-      {tab === "queue" &&
-        (queue.length === 0 ? (
-          <Empty
-            icon={<SquarePlay className="size-5" />}
-            title={total ? "Queue cleared. Well done." : "No videos yet"}
-            hint="Paste YouTube links in the order you want to learn them."
+      {videos.length === 0 && <p className="text-center text-[15px] text-faint">Paste a YouTube link — title, thumbnail and length fill in.</p>}
+      {videos.length > 0 && queue.length === 0 && <p className="text-center text-[15px] text-faint">All watched.</p>}
+
+      <ul>
+        {queue.map((v, i) => (
+          <QueueRow
+            key={v.id}
+            media={<Thumb video={v} onPlay={() => setPlaying(v)} />}
+            title={v.title}
+            subtitle={details(v)}
+            isFirst={i === 0}
+            isLast={i === queue.length - 1}
+            onMove={(dir) => moveVideo(v.id, dir)}
+            onRemove={() => confirm("Remove this video?") && deleteVideo(v.id)}
+            onComplete={() => completeVideo(v.id)}
+            onRename={(title) => updateVideo(v.id, { title })}
           />
-        ) : (
-          <div className="space-y-3">
-            {queue.map((v, i) => (
-              <Card key={v.id} className={cn("p-3 sm:p-3", i === 0 && "border-accent/40")}>
-                {playing === v.id && (
-                  <div className="relative mb-3 aspect-video overflow-hidden rounded-xl bg-black">
-                    <iframe
-                      className="absolute inset-0 size-full"
-                      src={`https://www.youtube-nocookie.com/embed/${v.youtubeId}?autoplay=1&rel=0`}
-                      title={v.title}
-                      allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                      allowFullScreen
-                    />
-                  </div>
-                )}
-                <div className="flex items-center gap-3">
-                  <span className="w-5 shrink-0 text-center font-mono text-xs text-muted">{i + 1}</span>
-                  <button onClick={() => setPlaying(playing === v.id ? null : v.id)} className="relative shrink-0 overflow-hidden rounded-lg">
-                    {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img src={ytThumb(v.youtubeId)} alt="" className="aspect-video w-24 object-cover sm:w-32" />
-                    <span className="absolute inset-0 flex items-center justify-center bg-black/20 text-white">
-                      {playing === v.id ? <X className="size-5" /> : <Play className="size-5 fill-white" />}
-                    </span>
-                  </button>
-                  <div className="min-w-0 flex-1">
-                    {i === 0 && <p className="text-[10px] font-semibold tracking-wider text-accent uppercase">Up next</p>}
-                    <p className="line-clamp-2 text-sm font-medium">{v.title}</p>
-                    {v.channel && <p className="truncate text-xs text-muted">{v.channel}</p>}
-                  </div>
-                  <div className="flex shrink-0 flex-col items-center gap-0.5 sm:flex-row">
-                    <div className="flex">
-                      <IconButton label="Move up" disabled={i === 0} onClick={() => useStore.getState().moveVideo(v.id, -1)}>
-                        <ArrowUp className="size-3.5" />
-                      </IconButton>
-                      <IconButton label="Move down" disabled={i === queue.length - 1} onClick={() => useStore.getState().moveVideo(v.id, 1)}>
-                        <ArrowDown className="size-3.5" />
-                      </IconButton>
-                    </div>
-                    <div className="flex">
-                      <IconButton label="Delete" className="hover:text-danger" onClick={() => confirm("Remove this video?") && useStore.getState().deleteVideo(v.id)}>
-                        <Trash2 className="size-3.5" />
-                      </IconButton>
-                      <IconButton label="Mark complete" className="text-accent hover:text-accent" onClick={() => setCompleting(v)}>
-                        <Check className="size-4" strokeWidth={2.5} />
-                      </IconButton>
-                    </div>
-                  </div>
-                </div>
-              </Card>
-            ))}
-          </div>
         ))}
+      </ul>
 
-      {tab === "done" &&
-        (done.length === 0 ? (
-          <Empty icon={<Check className="size-5" />} title="Nothing completed yet" hint="Finish a video and capture what you learned." />
-        ) : (
-          <div className="space-y-3">
-            {done.map((v) => {
-              const learning = learnings.find((l) => l.id === v.learningId);
-              return (
-                <Card key={v.id} className="p-3 sm:p-3">
-                  <div className="flex items-start gap-3">
-                    <a href={v.url} target="_blank" rel="noreferrer" className="shrink-0">
-                      {/* eslint-disable-next-line @next/next/no-img-element */}
-                      <img src={ytThumb(v.youtubeId)} alt="" className="aspect-video w-24 rounded-lg object-cover opacity-80" />
-                    </a>
-                    <div className="min-w-0 flex-1">
-                      <p className="line-clamp-2 text-sm font-medium">{v.title}</p>
-                      <p className="text-xs text-muted">Completed {v.completedAt && formatShort(toKey(new Date(v.completedAt)))}</p>
-                      {learning && (
-                        <p className="mt-2 flex gap-1.5 rounded-lg bg-accent-soft/60 p-2 text-xs leading-relaxed">
-                          <Lightbulb className="mt-0.5 size-3 shrink-0 text-accent" />
-                          {learning.text}
-                        </p>
-                      )}
-                    </div>
-                    <IconButton label="Move back to queue" onClick={() => useStore.getState().reopenVideo(v.id)}>
-                      <RotateCcw className="size-3.5" />
-                    </IconButton>
-                  </div>
-                </Card>
-              );
-            })}
-          </div>
+      <DoneSection label="Watched" count={done.length}>
+        {done.map((v) => (
+          <DoneRow key={v.id} media={<Thumb video={v} />} title={v.title} completedAt={v.completedAt} onReopen={() => reopenVideo(v.id)} />
         ))}
+      </DoneSection>
 
-      <LearnModal
-        open={!!completing}
-        title={completing?.title ?? ""}
-        onClose={() => setCompleting(null)}
-        onComplete={(learning) => {
-          if (completing) completeVideo(completing.id, learning);
-          if (playing === completing?.id) setPlaying(null);
-          setCompleting(null);
-        }}
-      />
+      <Modal open={!!playing} onClose={() => setPlaying(null)} title={<span className="line-clamp-1">{playing?.title}</span>} wide>
+        {playing && (
+          <div className="relative -mx-5 aspect-video bg-black sm:mx-0 sm:overflow-hidden sm:rounded-xl">
+            <iframe
+              className="absolute inset-0 size-full"
+              src={`https://www.youtube-nocookie.com/embed/${playing.youtubeId}?autoplay=1&rel=0`}
+              title={playing.title}
+              allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+              allowFullScreen
+            />
+          </div>
+        )}
+      </Modal>
     </div>
   );
 }

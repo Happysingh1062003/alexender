@@ -4,40 +4,48 @@ import { useStore } from "./store";
 import { parseYouTubeId } from "./utils";
 
 export const PENDING_TITLE = "Loading title…";
-const inFlight = new Set<string>();
+// Lookups are tried once per session; a failed one is retried the next time the app opens.
+const triedVideos = new Set<string>();
 
-/** Reads a video's title through our own oEmbed proxy. Safe to call repeatedly. */
+/** Reads a video's title and details through our own oEmbed proxy. */
 export async function fetchVideoTitle(id: string) {
   const video = useStore.getState().videos.find((v) => v.id === id);
-  if (!video || inFlight.has(id)) return;
-  inFlight.add(id);
+  if (!video || triedVideos.has(id)) return;
+  triedVideos.add(id);
   try {
     const res = await fetch(`/api/oembed?id=${video.youtubeId}`);
-    const data = res.ok ? ((await res.json()) as { title?: string; author?: string }) : {};
-    useStore.getState().updateVideo(id, { title: data.title || "Untitled video", channel: data.author });
+    const data = res.ok
+      ? ((await res.json()) as { title?: string; author?: string; durationSec?: number; views?: number; published?: string })
+      : {};
+    useStore.getState().updateVideo(id, {
+      title: data.title || "Untitled video",
+      channel: data.author,
+      durationSec: data.durationSec,
+      views: data.views,
+      published: data.published,
+    });
   } catch {
-    // offline — the Videos page retries pending titles on its next visit
-  } finally {
-    inFlight.delete(id);
+    // offline — retried next session
   }
 }
 
-/** Adds a YouTube video immediately; the title is filled in the background. Returns false for invalid links. */
-export function addVideoFromUrl(url: string, title?: string) {
+/** Adds a YouTube video immediately; the title is filled in the background. */
+export function addVideoFromUrl(url: string): "added" | "invalid" | "duplicate" {
   const youtubeId = parseYouTubeId(url);
-  if (!youtubeId) return false;
-  const id = useStore.getState().addVideo({ url: url.trim(), youtubeId, title: title?.trim() || PENDING_TITLE });
-  if (!title?.trim()) fetchVideoTitle(id);
-  return true;
+  if (!youtubeId) return "invalid";
+  if (useStore.getState().videos.some((v) => v.youtubeId === youtubeId && !v.done)) return "duplicate";
+  const id = useStore.getState().addVideo({ url: url.trim(), youtubeId, title: PENDING_TITLE });
+  fetchVideoTitle(id);
+  return "added";
 }
 
-const lookups = new Set<string>();
+const triedBooks = new Set<string>();
 
 /** Finds cover, author and page count on Open Library. Marks the book checked once a lookup completes. */
 export async function lookupBook(id: string) {
   const book = useStore.getState().books.find((b) => b.id === id);
-  if (!book || book.coverChecked || lookups.has(id)) return;
-  lookups.add(id);
+  if (!book || book.coverChecked || triedBooks.has(id)) return;
+  triedBooks.add(id);
   try {
     const q = new URLSearchParams({ title: book.title, limit: "5", fields: "cover_i,author_name,number_of_pages_median" });
     if (book.author) q.set("author", book.author);
@@ -54,9 +62,7 @@ export async function lookupBook(id: string) {
       totalPages: latest.totalPages ?? doc?.number_of_pages_median,
     });
   } catch {
-    // offline — the Books page retries on its next visit
-  } finally {
-    lookups.delete(id);
+    // offline — retried next session
   }
 }
 

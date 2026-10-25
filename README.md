@@ -1,8 +1,8 @@
 # Alexender
 
-A personal command center, named after Alexander the Great. Plan the day, score it, and keep the mission in sight.
+A private, calm command center for one person. Plan the day, see your progress, keep your missions in sight, and remember how much time you have.
 
-Built with Next.js 16 (App Router), React 19, Tailwind CSS 4 and Zustand. All data stays in your browser (IndexedDB). There are no accounts and no AI APIs.
+Next.js 16 · React 19 · Tailwind CSS 4 · Zustand. Black, minimal, mobile-first. Data is saved automatically in the browser (IndexedDB). No accounts, no AI APIs.
 
 ## Run
 
@@ -11,21 +11,22 @@ npm install
 npm run dev
 ```
 
-Then open http://localhost:3000. On your phone, use "Add to Home Screen" to install it like an app.
+Open http://localhost:3000. On a phone, use "Add to Home Screen".
 
-## Features
+## Sections
 
-- **Today**: greeting, day-of-year info, a daily quote, tasks with priority and time, a completion ring, Win/Loss status, a 7-day chart, a focus timer, a daily review (mood, win, lesson) and a "Remember" card that brings back a past learning.
-- **Calendar**: each day shows its completion %, with a W/L badge. Days you win (at or above your threshold, 70% by default) build a streak. Click a day to plan tasks for it or review it. Insights include streaks, averages, a 6-month heatmap and your best weekdays.
-- **Mission**: your mission statement and a vision board. Tap the text to edit it and upload images. Goals have images, milestones and deadlines.
-- **Videos**: an ordered YouTube queue. Titles are fetched automatically and videos play inline. When you mark one complete, it asks what you learned, saves that to Learnings and moves the video to Completed.
-- **Books**: the same flow, plus covers looked up automatically (Open Library) and a page tracker.
-- **Learnings**: everything you learn in one place. Supports #tags, search, filters, and stars (starred items come back on Today).
-- **Plans**: an Ideas / In motion / Done board for anything you want to plan or picture. Each plan has a cover, an image board, steps and notes. "Do next step today" adds the next step to today's tasks.
-- **Routines**: daily habits added to your day automatically, on the weekdays you choose (Settings).
-- **Quick command** (`Ctrl K`, `/` or the + button on mobile):
-  - `Gym !high @6pm tomorrow`: a task with priority, time and date
-  - `Call mom on fri` · `Read +3d`: schedule ahead
-  - `v <youtube link>` · `b Title by Author` · `l a learning #tag` · `g goal` · `p plan`
-  - Search across learnings, goals, plans, videos and books
-- **Backup**: export or import a JSON file that includes images (Settings).
+Every section has the same shape: a small label and "+ Add …" button at the top, the content centered below.
+
+- **Today** — today's tasks, completion % and time spent. A Today / Tomorrow switch at the top lets you plan tomorrow without showing both. Tick a task and its time is added automatically (▶ times it exactly; click the time to correct it). 70% or more is a successful day.
+- **Calendar** — month grid with each day's %, the selected day's tasks, and three numbers for the last 30 days.
+- **Mission** — only your missions and goals, large and centered. Tap one to open its images and upload more. Add or delete them in Settings.
+- **Journal** — "Write today" at the top, past entries below by date. Saves as you type.
+- **Videos** — paste a YouTube link; title, thumbnail, length, views and date fill in. Play, mark watched, see time left.
+- **Books** — reading list with page progress on the current book, and finished books. Covers are found automatically.
+- **Life** — days left from your birth date and your country's average life expectancy, with your life in weeks. Today shows a one-line reminder.
+- **Settings** — name, success threshold, missions & goals, passcode, backup export/import.
+
+## Privacy
+
+- **Passcode** (Settings → Privacy, or during setup): asked every time the app opens and after 5 minutes in the background. Stored only as a salted hash.
+- **Website password**: when you host Alexender online, set `ALEXENDER_PASSWORD` in your host's environment variables (or `.env.local`). Every page then requires it, checked on the server before anything loads.

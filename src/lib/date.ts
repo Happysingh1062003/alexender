@@ -21,13 +21,6 @@ export const daysBetween = (from: string, to: string) =>
 
 export const WEEKDAYS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 
-export const formatLong = (key: string) =>
-  fromKey(key).toLocaleDateString(undefined, {
-    weekday: "long",
-    day: "numeric",
-    month: "long",
-  });
-
 export const formatShort = (key: string) =>
   fromKey(key).toLocaleDateString(undefined, { day: "numeric", month: "short" });
 
@@ -35,13 +28,4 @@ export const formatTime12 = (hhmm: string) => {
   const [h, m] = hhmm.split(":").map(Number);
   const suffix = h >= 12 ? "pm" : "am";
   return `${h % 12 || 12}${m ? `:${pad(m)}` : ""}${suffix}`;
-};
-
-export const greeting = (hour: number) =>
-  hour < 5 ? "Burning the midnight oil" : hour < 12 ? "Good morning" : hour < 17 ? "Good afternoon" : "Good evening";
-
-/** Day of the year, used to rotate daily content deterministically. */
-export const dayOfYear = (key: string) => {
-  const d = fromKey(key);
-  return Math.floor((d.getTime() - new Date(d.getFullYear(), 0, 0).getTime()) / 86_400_000);
 };

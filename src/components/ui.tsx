@@ -1,9 +1,10 @@
 "use client";
 
-import { Check, ImagePlus, X } from "lucide-react";
+import { Check, ImagePlus, Plus, X } from "lucide-react";
 import {
   useEffect,
   useRef,
+  useState,
   type ButtonHTMLAttributes,
   type InputHTMLAttributes,
   type ReactNode,
@@ -24,11 +25,11 @@ export function Button({
   return (
     <button
       className={cn(
-        "inline-flex items-center justify-center gap-1.5 rounded-xl font-medium transition active:scale-[0.97] disabled:pointer-events-none disabled:opacity-40",
+        "inline-flex shrink-0 items-center justify-center gap-1.5 rounded-lg font-medium transition-colors active:scale-[0.98] disabled:pointer-events-none disabled:opacity-35",
         size === "sm" ? "h-8 px-3 text-xs" : "h-10 px-4 text-sm",
-        variant === "primary" && "bg-fg text-bg hover:opacity-90",
+        variant === "primary" && "bg-fg text-bg hover:bg-white",
         variant === "ghost" && "text-muted hover:bg-surface-2 hover:text-fg",
-        variant === "outline" && "border border-line bg-surface hover:bg-surface-2",
+        variant === "outline" && "border border-line-strong text-fg hover:bg-surface-2",
         variant === "danger" && "text-danger hover:bg-danger/10",
         className,
       )}
@@ -47,7 +48,7 @@ export function IconButton({
       aria-label={label}
       title={label}
       className={cn(
-        "inline-flex size-8 shrink-0 items-center justify-center rounded-lg text-muted transition hover:bg-surface-2 hover:text-fg active:scale-90 disabled:opacity-30",
+        "inline-flex size-8 shrink-0 items-center justify-center rounded-lg text-faint transition-colors hover:bg-surface-2 hover:text-fg active:scale-95 disabled:opacity-25",
         className,
       )}
       {...props}
@@ -57,7 +58,7 @@ export function IconButton({
 
 export function Card({ className, children, ...props }: { className?: string; children: ReactNode } & React.HTMLAttributes<HTMLDivElement>) {
   return (
-    <div className={cn("rounded-2xl border border-line bg-surface p-4 shadow-soft sm:p-5", className)} {...props}>
+    <div className={cn("rounded-2xl border border-line bg-surface p-4 sm:p-5", className)} {...props}>
       {children}
     </div>
   );
@@ -65,8 +66,8 @@ export function Card({ className, children, ...props }: { className?: string; ch
 
 export function SectionTitle({ children, action }: { children: ReactNode; action?: ReactNode }) {
   return (
-    <div className="mb-3 flex items-center justify-between gap-2">
-      <h2 className="text-xs font-semibold uppercase tracking-[0.12em] text-muted">{children}</h2>
+    <div className="mb-3 flex min-h-8 items-center justify-between gap-2">
+      <h2 className="text-[13px] font-medium text-muted">{children}</h2>
       {action}
     </div>
   );
@@ -76,7 +77,7 @@ export function Input({ className, ...props }: InputHTMLAttributes<HTMLInputElem
   return (
     <input
       className={cn(
-        "h-10 w-full rounded-xl border border-line bg-surface px-3 outline-none transition placeholder:text-muted/70 focus:border-fg/30 focus:ring-4 focus:ring-fg/5",
+        "h-10 w-full rounded-lg border border-line bg-surface px-3 text-fg outline-none transition-colors placeholder:text-faint focus:border-line-strong focus:bg-surface-2",
         className,
       )}
       {...props}
@@ -88,7 +89,7 @@ export function Textarea({ className, ...props }: TextareaHTMLAttributes<HTMLTex
   return (
     <textarea
       className={cn(
-        "w-full resize-none rounded-xl border border-line bg-surface p-3 outline-none transition placeholder:text-muted/70 focus:border-fg/30 focus:ring-4 focus:ring-fg/5",
+        "w-full resize-none rounded-lg border border-line bg-surface p-3 text-fg outline-none transition-colors placeholder:text-faint focus:border-line-strong focus:bg-surface-2",
         className,
       )}
       {...props}
@@ -96,19 +97,33 @@ export function Textarea({ className, ...props }: TextareaHTMLAttributes<HTMLTex
   );
 }
 
-export function Checkbox({ checked, onChange, label }: { checked: boolean; onChange: () => void; label: string }) {
+export function Checkbox({
+  checked,
+  onChange,
+  label,
+  size = "md",
+}: {
+  checked: boolean;
+  onChange: () => void;
+  label: string;
+  size?: "sm" | "md";
+}) {
   return (
     <button
       role="checkbox"
       aria-checked={checked}
       aria-label={label}
-      onClick={onChange}
+      onClick={(e) => {
+        e.stopPropagation();
+        onChange();
+      }}
       className={cn(
-        "flex size-[22px] shrink-0 items-center justify-center rounded-full border-[1.5px] transition",
-        checked ? "animate-pop border-accent bg-accent text-accent-fg" : "border-muted/50 hover:border-accent",
+        "flex shrink-0 items-center justify-center rounded-full border-[1.5px] transition-colors",
+        size === "sm" ? "size-4" : "size-[22px]",
+        checked ? "border-fg bg-fg text-bg" : "border-faint hover:border-fg",
       )}
     >
-      {checked && <Check className="size-3.5" strokeWidth={3} />}
+      {checked && <Check className={cn("animate-check", size === "sm" ? "size-2.5" : "size-3.5")} strokeWidth={3.2} />}
     </button>
   );
 }
@@ -141,17 +156,17 @@ export function Modal({
   // Portal to <body> so animated (transformed) page containers can't trap the fixed overlay.
   return createPortal(
     <div className="fixed inset-0 z-50 flex items-end justify-center sm:items-center sm:p-6">
-      <div className="absolute inset-0 bg-black/40 backdrop-blur-[2px]" onClick={onClose} />
+      <div className="animate-fade absolute inset-0 bg-black/70 backdrop-blur-sm" onClick={onClose} />
       <div
         role="dialog"
         aria-modal="true"
         className={cn(
-          "animate-rise relative flex max-h-[92dvh] w-full flex-col rounded-t-3xl border border-line bg-surface shadow-2xl sm:rounded-3xl",
+          "animate-sheet relative flex max-h-[92dvh] w-full flex-col rounded-t-2xl border border-line-strong bg-surface sm:rounded-2xl",
           wide ? "sm:max-w-2xl" : "sm:max-w-md",
         )}
       >
         <div className="flex items-center justify-between gap-3 px-5 pt-4 pb-2">
-          <div className="min-w-0 text-base font-semibold">{title}</div>
+          <div className="min-w-0 flex-1 text-[15px] font-semibold">{title}</div>
           <IconButton label="Close" onClick={onClose}>
             <X className="size-4" />
           </IconButton>
@@ -163,55 +178,64 @@ export function Modal({
   );
 }
 
+/** Completion ring with a small tick marking the success target. */
 export function ProgressRing({
   value,
-  size = 64,
-  stroke = 6,
+  target,
+  size = 168,
+  stroke = 8,
+  success,
   children,
 }: {
   value: number;
+  target?: number;
   size?: number;
   stroke?: number;
+  success?: boolean;
   children?: ReactNode;
 }) {
   const r = (size - stroke) / 2;
   const c = 2 * Math.PI * r;
+  const angle = ((target ?? 0) / 100) * 2 * Math.PI - Math.PI / 2;
   return (
-    <div className="relative shrink-0" style={{ width: size, height: size }}>
-      <svg width={size} height={size} className="-rotate-90">
-        <circle cx={size / 2} cy={size / 2} r={r} fill="none" stroke="var(--surface-2)" strokeWidth={stroke} />
+    <div className="relative" style={{ width: size, height: size }}>
+      <svg width={size} height={size} className="-rotate-90" aria-hidden>
+        <circle cx={size / 2} cy={size / 2} r={r} fill="none" stroke="var(--surface-3)" strokeWidth={stroke} />
         <circle
           cx={size / 2}
           cy={size / 2}
           r={r}
           fill="none"
-          stroke="var(--accent)"
+          stroke={success ? "var(--success)" : "var(--fg)"}
           strokeWidth={stroke}
           strokeLinecap="round"
           strokeDasharray={c}
           strokeDashoffset={c - (Math.min(100, value) / 100) * c}
-          style={{ transition: "stroke-dashoffset 0.6s ease" }}
+          style={{ transition: "stroke-dashoffset 0.8s cubic-bezier(0.2, 0.8, 0.2, 1), stroke 0.3s" }}
         />
       </svg>
-      <div className="absolute inset-0 flex items-center justify-center">{children}</div>
+      {target !== undefined && (
+        <span
+          title={`Success at ${target}%`}
+          className="absolute size-1.5 rounded-full bg-success"
+          style={{
+            left: size / 2 + r * Math.cos(angle) - 3,
+            top: size / 2 + r * Math.sin(angle) - 3,
+          }}
+        />
+      )}
+      <div className="absolute inset-0 flex flex-col items-center justify-center">{children}</div>
     </div>
   );
 }
 
-export function ProgressBar({ value, className }: { value: number; className?: string }) {
+export function ProgressBar({ value, className, tone }: { value: number; className?: string; tone?: "success" }) {
   return (
-    <div className={cn("h-1.5 w-full overflow-hidden rounded-full bg-surface-2", className)}>
-      <div className="h-full rounded-full bg-accent transition-all duration-500" style={{ width: `${Math.min(100, value)}%` }} />
-    </div>
-  );
-}
-
-export function Empty({ icon, title, hint }: { icon: ReactNode; title: string; hint?: string }) {
-  return (
-    <div className="flex flex-col items-center justify-center gap-2 rounded-2xl border border-dashed border-line px-6 py-10 text-center">
-      <div className="text-muted">{icon}</div>
-      <p className="text-sm font-medium">{title}</p>
-      {hint && <p className="max-w-xs text-xs text-muted">{hint}</p>}
+    <div className={cn("h-1 w-full overflow-hidden rounded-full bg-surface-3", className)}>
+      <div
+        className={cn("h-full rounded-full transition-[width] duration-500", tone === "success" ? "bg-success" : "bg-fg")}
+        style={{ width: `${Math.min(100, value)}%` }}
+      />
     </div>
   );
 }
@@ -226,14 +250,14 @@ export function Segmented<T extends string>({
   options: { value: T; label: ReactNode }[];
 }) {
   return (
-    <div className="inline-flex rounded-xl bg-surface-2 p-1">
+    <div className="inline-flex rounded-lg border border-line bg-surface p-0.5">
       {options.map((o) => (
         <button
           key={o.value}
           onClick={() => onChange(o.value)}
           className={cn(
-            "rounded-lg px-3 py-1.5 text-xs font-medium transition",
-            value === o.value ? "bg-surface text-fg shadow-soft" : "text-muted hover:text-fg",
+            "rounded-md px-3 py-1.5 text-xs font-medium transition-colors",
+            value === o.value ? "bg-surface-3 text-fg" : "text-muted hover:text-fg",
           )}
         >
           {o.label}
@@ -279,10 +303,13 @@ export function ImageUploadButton({
       />
       <button
         type="button"
-        onClick={() => ref.current?.click()}
+        onClick={(e) => {
+          e.stopPropagation();
+          ref.current?.click();
+        }}
         className={cn(
-          "flex items-center justify-center gap-2 rounded-xl text-sm transition",
-          !plain && "border border-dashed border-line text-muted hover:border-accent hover:text-accent",
+          "flex items-center justify-center gap-2 rounded-xl text-sm transition-colors",
+          !plain && "border border-dashed border-line-strong text-muted hover:border-faint hover:text-fg",
           className,
         )}
       >
@@ -296,80 +323,136 @@ export function ImageUploadButton({
   );
 }
 
-export function ImageGrid({ ids, onRemove }: { ids: string[]; onRemove?: (id: string) => void }) {
-  if (!ids.length) return null;
-  return (
-    <div className="columns-2 gap-2 sm:columns-3 [&>*]:mb-2">
-      {ids.map((id) => (
-        <div key={id} className="group relative break-inside-avoid overflow-hidden rounded-xl">
-          <StoredImage id={id} className="min-h-24 w-full" />
-          {onRemove && (
-            <button
-              aria-label="Remove image"
-              onClick={() => onRemove(id)}
-              className="absolute top-1.5 right-1.5 flex size-7 items-center justify-center rounded-full bg-black/60 text-white opacity-100 transition sm:opacity-0 sm:group-hover:opacity-100"
-            >
-              <X className="size-3.5" />
-            </button>
-          )}
-        </div>
-      ))}
-    </div>
-  );
-}
-
-export function StepList({
-  steps,
-  onChange,
-  placeholder = "Add a step…",
+/** Text that turns into an input on click; saves on Enter or blur, cancels on Escape. */
+export function EditableText({
+  value,
+  onSave,
+  className,
+  placeholder,
 }: {
-  steps: { id: string; title: string; done: boolean }[];
-  onChange: (steps: { id: string; title: string; done: boolean }[]) => void;
+  value: string;
+  onSave: (value: string) => void;
+  className?: string;
   placeholder?: string;
 }) {
-  return (
-    <div className="space-y-1">
-      {steps.map((s) => (
-        <div key={s.id} className="group flex items-center gap-3 rounded-lg py-1.5">
-          <Checkbox
-            checked={s.done}
-            label={s.title}
-            onChange={() => onChange(steps.map((x) => (x.id === s.id ? { ...x, done: !x.done } : x)))}
-          />
-          <span className={cn("flex-1 text-sm", s.done && "text-muted line-through")}>{s.title}</span>
-          <IconButton
-            label="Remove step"
-            className="sm:opacity-0 sm:group-hover:opacity-100"
-            onClick={() => onChange(steps.filter((x) => x.id !== s.id))}
-          >
-            <X className="size-3.5" />
-          </IconButton>
-        </div>
-      ))}
-      <form
-        onSubmit={(e) => {
-          e.preventDefault();
-          const input = e.currentTarget.elements.namedItem("step") as HTMLInputElement;
-          const title = input.value.trim();
-          if (!title) return;
-          onChange([...steps, { id: crypto.randomUUID(), title, done: false }]);
-          input.value = "";
+  const [editing, setEditing] = useState(false);
+  // Set once Enter or Escape has handled the edit, so the blur that follows doesn't act again.
+  const handled = useRef(false);
+  if (editing) {
+    const finish = (input: HTMLInputElement) => {
+      if (handled.current) return;
+      handled.current = true;
+      setEditing(false);
+      const next = input.value.trim();
+      if (next !== value) onSave(next);
+    };
+    return (
+      <input
+        autoFocus
+        defaultValue={value}
+        placeholder={placeholder}
+        onClick={(e) => e.stopPropagation()}
+        onBlur={(e) => finish(e.currentTarget)}
+        onKeyDown={(e) => {
+          if (e.key === "Enter") finish(e.currentTarget);
+          if (e.key === "Escape") {
+            handled.current = true;
+            setEditing(false);
+          }
         }}
-      >
-        <Input name="step" placeholder={placeholder} className="h-9" />
-      </form>
-    </div>
+        className={cn("w-full rounded-md bg-surface-2 px-1 -mx-1 outline-none", className)}
+      />
+    );
+  }
+  return (
+    <button
+      type="button"
+      title="Click to edit"
+      onClick={(e) => {
+        e.stopPropagation();
+        handled.current = false;
+        setEditing(true);
+      }}
+      className={cn("block max-w-full cursor-text text-left", !value && "text-faint", className)}
+    >
+      {value || placeholder}
+    </button>
   );
 }
 
-export function PageHeader({ title, subtitle, action }: { title: string; subtitle?: ReactNode; action?: ReactNode }) {
+/** The small round "+ Add …" button used at the top of sections. */
+export function PillButton({ active, children, ...props }: ButtonHTMLAttributes<HTMLButtonElement> & { active?: boolean }) {
   return (
-    <div className="mb-6 flex items-end justify-between gap-4">
-      <div>
-        <h1 className="font-serif text-3xl tracking-tight sm:text-4xl">{title}</h1>
-        {subtitle && <p className="mt-1 text-sm text-muted">{subtitle}</p>}
-      </div>
-      {action}
+    <button
+      {...props}
+      className={cn(
+        "inline-flex h-8 items-center gap-1.5 rounded-full border px-3.5 text-[13px] font-medium transition-colors",
+        active ? "border-fg text-fg" : "border-line-strong text-muted hover:border-faint hover:text-fg",
+      )}
+    >
+      <Plus className={cn("size-3.5 transition-transform", active && "rotate-45")} />
+      {children}
+    </button>
+  );
+}
+
+export interface AddAction {
+  label: string;
+  placeholder: string;
+  onAdd: (text: string) => void;
+  /** Keep the input open after adding, for entering several in a row. */
+  keepOpen?: boolean;
+}
+
+/** The top of every section: a quiet label, small add buttons, and an input only while adding. */
+export function SectionTop({ label, actions = [], children }: { label?: string; actions?: AddAction[]; children?: ReactNode }) {
+  const [open, setOpen] = useState<number | null>(null);
+  const [text, setText] = useState("");
+  const action = open !== null ? actions[open] : null;
+
+  return (
+    <div className="mb-10 flex flex-col items-center gap-4 text-center sm:mb-14">
+      {label && <p className="text-[11px] font-medium tracking-[0.2em] text-faint uppercase">{label}</p>}
+      {(children || actions.length > 0) && (
+        <div className="flex flex-wrap items-center justify-center gap-2">
+          {children}
+          {actions.map((a, i) => (
+            <PillButton
+              key={a.label}
+              active={open === i}
+              onClick={() => {
+                setOpen(open === i ? null : i);
+                setText("");
+              }}
+            >
+              {a.label}
+            </PillButton>
+          ))}
+        </div>
+      )}
+      {action && (
+        <form
+          className="w-full max-w-md"
+          onSubmit={(e) => {
+            e.preventDefault();
+            const value = text.trim();
+            if (!value) return;
+            action.onAdd(value);
+            setText("");
+            if (!action.keepOpen) setOpen(null);
+          }}
+        >
+          <Input
+            autoFocus
+            value={text}
+            onChange={(e) => setText(e.target.value)}
+            onKeyDown={(e) => e.key === "Escape" && setOpen(null)}
+            aria-label={action.label}
+            placeholder={action.placeholder}
+            className="h-11 text-center"
+          />
+        </form>
+      )}
     </div>
   );
 }

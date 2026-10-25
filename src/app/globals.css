@@ -1,36 +1,21 @@
 @import "tailwindcss";
 
-@custom-variant dark (&:where(.dark, .dark *));
-
+/* Alexender is black-only: one theme, tuned for focus. */
 :root {
-  --bg: #fafaf9;
-  --surface: #ffffff;
-  --surface-2: #f3f2f0;
-  --line: #e7e5e2;
-  --fg: #1c1917;
-  --muted: #78716c;
-  --accent: #b45309;
-  --accent-fg: #ffffff;
-  --accent-soft: #fdf3e1;
-  --success: #15803d;
-  --danger: #dc2626;
-  --shadow: 0 1px 2px rgb(28 25 23 / 0.04), 0 4px 16px rgb(28 25 23 / 0.04);
-  color-scheme: light;
-}
-
-.dark {
-  --bg: #0d0c0b;
-  --surface: #161514;
-  --surface-2: #201e1c;
-  --line: #2b2826;
-  --fg: #f5f4f2;
-  --muted: #a39d97;
-  --accent: #f0a63a;
-  --accent-fg: #1c1206;
-  --accent-soft: #33240e;
-  --success: #4ade80;
-  --danger: #f87171;
-  --shadow: 0 1px 2px rgb(0 0 0 / 0.3);
+  --bg: #000000;
+  --surface: #0b0b0b;
+  --surface-2: #151515;
+  --surface-3: #1d1d1d;
+  --line: #1f1f1f;
+  --line-strong: #2c2c2c;
+  --fg: #e9e9e7;
+  --muted: #8c8c89;
+  --faint: #5c5c5c;
+  --accent: #ffffff;
+  --accent-fg: #000000;
+  --accent-soft: #1a1a1a;
+  --success: #5ec79a;
+  --danger: #e0696b;
   color-scheme: dark;
 }
 
@@ -38,31 +23,54 @@
   --color-bg: var(--bg);
   --color-surface: var(--surface);
   --color-surface-2: var(--surface-2);
+  --color-surface-3: var(--surface-3);
   --color-line: var(--line);
+  --color-line-strong: var(--line-strong);
   --color-fg: var(--fg);
   --color-muted: var(--muted);
+  --color-faint: var(--faint);
   --color-accent: var(--accent);
   --color-accent-fg: var(--accent-fg);
   --color-accent-soft: var(--accent-soft);
   --color-success: var(--success);
   --color-danger: var(--danger);
-  --font-sans: var(--font-geist-sans);
+  --font-sans: var(--font-inter);
   --font-mono: var(--font-geist-mono);
-  --font-serif: var(--font-serif-display);
-  --shadow-soft: var(--shadow);
 }
 
 html {
   -webkit-tap-highlight-color: transparent;
+  background: var(--bg);
 }
 
 body {
   background: var(--bg);
   color: var(--fg);
+  font-feature-settings: "cv11", "ss01", "ss03";
+  letter-spacing: -0.006em;
 }
 
 ::selection {
-  background: var(--accent-soft);
+  background: #ffffff33;
+}
+
+button:not(:disabled),
+[role="button"],
+summary,
+label[for] {
+  cursor: pointer;
+}
+
+:focus-visible {
+  outline: 2px solid color-mix(in oklab, var(--fg) 55%, transparent);
+  outline-offset: 2px;
+  border-radius: 6px;
+}
+
+input:focus-visible,
+textarea:focus-visible,
+select:focus-visible {
+  outline: none;
 }
 
 input,
@@ -79,6 +87,11 @@ select {
   }
 }
 
+input[type="date"]::-webkit-calendar-picker-indicator,
+input[type="time"]::-webkit-calendar-picker-indicator {
+  filter: invert(0.7);
+}
+
 .no-scrollbar::-webkit-scrollbar {
   display: none;
 }
@@ -86,33 +99,64 @@ select {
   scrollbar-width: none;
 }
 
-@keyframes rise {
+* {
+  scrollbar-color: #2c2c2c transparent;
+}
+
+@keyframes fade-in {
   from {
     opacity: 0;
-    transform: translateY(6px);
   }
   to {
     opacity: 1;
-    transform: none;
   }
 }
-.animate-rise {
-  animation: rise 0.25s ease-out both;
+.animate-fade {
+  animation: fade-in 0.2s ease-out both;
 }
 
-@keyframes pop {
-  0% {
-    transform: scale(1);
+@keyframes sheet-up {
+  from {
+    opacity: 0;
+    transform: translateY(12px);
   }
-  50% {
-    transform: scale(1.18);
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+.animate-sheet {
+  animation: sheet-up 0.22s cubic-bezier(0.2, 0.8, 0.2, 1) both;
+}
+
+@keyframes check-pop {
+  0% {
+    transform: scale(0.6);
+  }
+  60% {
+    transform: scale(1.12);
   }
   100% {
     transform: scale(1);
   }
 }
-.animate-pop {
-  animation: pop 0.25s ease-out;
+.animate-check {
+  animation: check-pop 0.22s ease-out;
+}
+
+@keyframes shake {
+  0%,
+  100% {
+    transform: translateX(0);
+  }
+  20%,
+  60% {
+    transform: translateX(-8px);
+  }
+  40%,
+  80% {
+    transform: translateX(8px);
+  }
 }
 
 .pb-safe {

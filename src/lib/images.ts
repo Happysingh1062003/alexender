@@ -1,6 +1,6 @@
 "use client";
 
-import { createStore, del, get, set, type UseStore } from "idb-keyval";
+import { clear, createStore, del, get, set, type UseStore } from "idb-keyval";
 import { useEffect, useState } from "react";
 import { uid } from "./utils";
 
@@ -26,9 +26,16 @@ async function compress(file: File, max = 1600, quality = 0.85): Promise<Blob> {
 export async function saveImages(files: FileList | File[]): Promise<string[]> {
   const ids: string[] = [];
   for (const file of Array.from(files)) {
-    if (!file.type.startsWith("image/")) continue;
+    // Some pickers report no MIME type (e.g. HEIC on Windows), so fall back to the extension.
+    if (!file.type.startsWith("image/") && !/\.(jpe?g|png|gif|webp|avif|bmp|heic|heif)$/i.test(file.name)) continue;
+    let blob: Blob = file;
+    try {
+      blob = await compress(file);
+    } catch {
+      // The browser can't decode it for resizing — keep the original rather than losing it.
+    }
     const id = uid();
-    await set(id, await compress(file), imgStore());
+    await set(id, blob, imgStore());
     ids.push(id);
   }
   return ids;
@@ -40,13 +47,41 @@ export async function deleteImages(ids: string[]) {
     const url = urlCache.get(id);
     if (url) URL.revokeObjectURL(url);
     urlCache.delete(id);
+    // Remove the synced copy too; harmless when sync is off.
+    fetch(`/api/images?id=${encodeURIComponent(id)}`, { method: "DELETE" }).catch(() => {});
   }
+}
+
+export const getImageBlob = (id: string) => get<Blob>(id, imgStore());
+
+const missing = new Set<string>();
+
+/** A photo added on another device: download it once and keep it on this device. */
+async function fetchRemoteImage(id: string): Promise<Blob | null> {
+  if (missing.has(id)) return null;
+  try {
+    const res = await fetch(`/api/images?id=${encodeURIComponent(id)}`);
+    if (!res.ok) throw new Error(String(res.status));
+    const blob = await res.blob();
+    await set(id, blob, imgStore());
+    return blob;
+  } catch {
+    missing.add(id); // try again next session rather than on every render
+    return null;
+  }
+}
+
+/** Removes every stored image — used when all data is erased. */
+export async function clearImages() {
+  for (const url of urlCache.values()) URL.revokeObjectURL(url);
+  urlCache.clear();
+  await clear(imgStore());
 }
 
 export async function getImageUrl(id: string): Promise<string | null> {
   const cached = urlCache.get(id);
   if (cached) return cached;
-  const blob = await get<Blob>(id, imgStore());
+  const blob = (await get<Blob>(id, imgStore())) ?? (await fetchRemoteImage(id));
   if (!blob) return null;
   const url = URL.createObjectURL(blob);
   urlCache.set(id, url);

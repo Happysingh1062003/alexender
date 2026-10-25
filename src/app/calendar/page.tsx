@@ -1,276 +1,211 @@
 "use client";
 
-import { ChevronLeft, ChevronRight, Flame, Target, Timer, Trophy } from "lucide-react";
-import { useMemo, useState } from "react";
+import { ChevronLeft, ChevronRight } from "lucide-react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { TaskList } from "@/components/TaskList";
-import { Button, Card, PageHeader, ProgressRing, SectionTitle } from "@/components/ui";
-import { addDays, formatLong, fromKey, toKey, WEEKDAYS } from "@/lib/date";
-import { bestStreak, currentStreak, dayResult, lastNDays, rangeSummary, weekdayAverages, type DayResult } from "@/lib/stats";
+import { SectionTop } from "@/components/ui";
+import { addDays, formatShort, fromKey, toKey, WEEKDAYS } from "@/lib/date";
+import { currentStreak, dayResult, lastNDays, rangeSummary, type DayResult } from "@/lib/stats";
 import { useClock, useStore } from "@/lib/store";
-import { cn } from "@/lib/utils";
+import { cn, formatMinutes, parseQuickTask } from "@/lib/utils";
 
-const MOODS = ["😞", "😕", "😐", "🙂", "🔥"];
+/** Day colour: green for a successful day, grey otherwise — stronger the more you finished. */
+const dayFill = (pct: number, win: boolean) =>
+  `color-mix(in oklab, ${win ? "var(--success)" : "var(--fg)"} ${win ? 14 + pct * 0.16 : 4 + pct * 0.1}%, transparent)`;
 
-const heat = (p: number) => `color-mix(in oklab, var(--accent) ${Math.max(8, p * 0.55)}%, transparent)`;
+const RESULT_TEXT: Record<DayResult, string> = {
+  win: "text-success",
+  loss: "text-danger",
+  live: "text-muted",
+  none: "text-faint",
+};
 
 export default function CalendarPage() {
   const today = useClock((s) => s.today);
   const days = useStore((s) => s.days);
+  const tasks = useStore((s) => s.tasks);
   const threshold = useStore((s) => s.settings.winThreshold);
-  const [cursor, setCursor] = useState(() => today.slice(0, 7));
+  const addTask = useStore((s) => s.addTask);
+  const [month, setMonth] = useState(() => today.slice(0, 7));
   const [selected, setSelected] = useState(today);
+  const touchX = useRef<number | null>(null);
 
-  const [year, month] = cursor.split("-").map(Number);
-  const first = new Date(year, month - 1, 1);
-  const daysInMonth = new Date(year, month, 0).getDate();
-  const monthDates = Array.from({ length: daysInMonth }, (_, i) => toKey(new Date(year, month - 1, i + 1)));
-  const leading = first.getDay();
-  const summary = rangeSummary(days, monthDates, today, threshold);
+  const shift = useCallback((dir: number) => {
+    setMonth((m) => {
+      const [y, mo] = m.split("-").map(Number);
+      return toKey(new Date(y, mo - 1 + dir, 1)).slice(0, 7);
+    });
+  }, []);
 
-  const shift = (n: number) => {
-    const d = new Date(year, month - 1 + n, 1);
-    setCursor(toKey(d).slice(0, 7));
-  };
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.target instanceof HTMLElement && /INPUT|TEXTAREA/.test(e.target.tagName)) return;
+      if (e.key === "ArrowLeft") shift(-1);
+      if (e.key === "ArrowRight") shift(1);
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [shift]);
 
-  return (
-    <div className="animate-rise">
-      <PageHeader title="Calendar" subtitle="Every day is a battle. Here is the record." />
+  const [y, mo] = month.split("-").map(Number);
+  const first = toKey(new Date(y, mo - 1, 1));
+  const start = addDays(first, -fromKey(first).getDay());
+  const cells = Array.from({ length: 42 }, (_, i) => addDays(start, i));
 
-      <div className="grid grid-cols-1 gap-4 lg:grid-cols-5">
-        <Card className="min-w-0 lg:col-span-3">
-          <div className="mb-4 flex items-center justify-between">
-            <h2 className="font-serif text-2xl">
-              {first.toLocaleDateString(undefined, { month: "long", year: "numeric" })}
-            </h2>
-            <div className="flex items-center gap-1">
-              <Button size="sm" variant="ghost" onClick={() => { setCursor(today.slice(0, 7)); setSelected(today); }}>
-                Today
-              </Button>
-              <Button size="sm" variant="ghost" aria-label="Previous month" onClick={() => shift(-1)}>
-                <ChevronLeft className="size-4" />
-              </Button>
-              <Button size="sm" variant="ghost" aria-label="Next month" onClick={() => shift(1)}>
-                <ChevronRight className="size-4" />
-              </Button>
-            </div>
-          </div>
-
-          <div className="grid grid-cols-7 gap-1 text-center text-[10px] font-medium tracking-wider text-muted uppercase sm:gap-1.5">
-            {WEEKDAYS.map((d) => (
-              <div key={d} className="pb-1">{d}</div>
-            ))}
-            {Array.from({ length: leading }, (_, i) => <div key={`pad-${i}`} />)}
-            {monthDates.map((date) => {
-              const log = days[date];
-              const r = dayResult(log, date, today, threshold);
-              const has = log && log.total > 0;
-              return (
-                <button
-                  key={date}
-                  onClick={() => setSelected(date)}
-                  className={cn(
-                    "relative flex aspect-square flex-col items-center justify-center rounded-xl text-xs transition sm:text-sm",
-                    selected === date ? "ring-2 ring-fg" : "hover:ring-1 hover:ring-line",
-                    date === today && "font-bold",
-                    date > today && "text-muted",
-                  )}
-                  style={{ background: has ? heat(log.pct) : "var(--surface-2)" }}
-                >
-                  <span className="normal-case">{fromKey(date).getDate()}</span>
-                  {has && <span className="text-[9px] font-semibold tracking-normal normal-case sm:text-[10px]">{log.pct}%</span>}
-                  <ResultBadge result={r} />
-                </button>
-              );
-            })}
-          </div>
-
-          <div className="mt-5 grid grid-cols-4 gap-2 text-center">
-            <Stat label="Wins" value={summary.wins} tone="success" />
-            <Stat label="Losses" value={summary.losses} tone="danger" />
-            <Stat label="Average" value={`${summary.avg}%`} />
-            <Stat label="Perfect" value={summary.perfect} />
-          </div>
-        </Card>
-
-        <div className="min-w-0 lg:col-span-2">
-          <DayPanel date={selected} />
-        </div>
-      </div>
-
-      <Insights />
-    </div>
-  );
-}
-
-function ResultBadge({ result }: { result: DayResult }) {
-  if (result !== "win" && result !== "loss") return null;
-  return (
-    <span
-      className={cn(
-        "absolute top-1 right-1 flex size-3.5 items-center justify-center rounded-full text-[8px] font-bold text-white sm:size-4 sm:text-[9px]",
-        result === "win" ? "bg-success" : "bg-danger",
-      )}
-    >
-      {result === "win" ? "W" : "L"}
-    </span>
-  );
-}
-
-function Stat({ label, value, tone }: { label: string; value: string | number; tone?: "success" | "danger" }) {
-  return (
-    <div className="rounded-xl bg-surface-2 py-2.5">
-      <p className={cn("text-lg font-semibold tabular-nums", tone === "success" && "text-success", tone === "danger" && "text-danger")}>
-        {value}
-      </p>
-      <p className="text-[10px] tracking-wider text-muted uppercase">{label}</p>
-    </div>
-  );
-}
-
-function DayPanel({ date }: { date: string }) {
-  const today = useClock((s) => s.today);
-  const log = useStore((s) => s.days[date]);
-  const threshold = useStore((s) => s.settings.winThreshold);
-  const r = dayResult(log, date, today, threshold);
-  const label = { win: "Won", loss: "Lost", live: "In progress", none: date > today ? "Plan ahead" : "No tasks" }[r];
-
-  return (
-    <Card>
-      <div className="mb-4 flex items-center gap-4">
-        <ProgressRing value={log?.pct ?? 0} size={56} stroke={5}>
-          <span className="text-xs font-semibold">{log?.pct ?? 0}%</span>
-        </ProgressRing>
-        <div className="min-w-0">
-          <p className="font-medium">{formatLong(date)}</p>
-          <p className="text-xs text-muted">
-            <span className={cn(r === "win" && "text-success", r === "loss" && "text-danger")}>{label}</span>
-            {" · "}
-            {log?.done ?? 0}/{log?.total ?? 0} tasks
-            {log?.focusMin ? ` · ${log.focusMin}m focus` : ""}
-            {log?.mood ? ` · ${MOODS[log.mood - 1]}` : ""}
-          </p>
-        </div>
-      </div>
-      <TaskList date={date} compact />
-      {(log?.wins || log?.lesson) && (
-        <div className="mt-4 space-y-2 border-t border-line pt-4 text-sm">
-          {log.wins && (
-            <p>
-              <span className="text-xs text-muted">Win · </span>
-              {log.wins}
-            </p>
-          )}
-          {log.lesson && (
-            <p>
-              <span className="text-xs text-muted">Lesson · </span>
-              {log.lesson}
-            </p>
-          )}
-        </div>
-      )}
-    </Card>
-  );
-}
-
-function Insights() {
-  const today = useClock((s) => s.today);
-  const days = useStore((s) => s.days);
-  const threshold = useStore((s) => s.settings.winThreshold);
+  const selLog = days[selected];
+  const selResult = dayResult(selLog, selected, today, threshold);
+  const selSpent = tasks.reduce((s, t) => s + (t.date === selected && t.done ? (t.spentMin ?? 0) : 0), 0);
+  const sel = fromKey(selected);
 
   const stats = useMemo(() => {
-    const last30 = rangeSummary(days, lastNDays(today, 30), today, threshold);
-    const last7 = rangeSummary(days, lastNDays(today, 7), today, threshold);
-    const all = Object.values(days);
-    return {
-      last7,
-      last30,
-      streak: currentStreak(days, today, threshold),
-      best: bestStreak(days, today, threshold),
-      weekdays: weekdayAverages(days, today),
-      focusTotal: all.reduce((s, l) => s + (l.focusMin ?? 0), 0),
-      tasksDone: all.reduce((s, l) => s + l.done, 0),
-    };
+    const dates = lastNDays(today, 30);
+    const summary = rangeSummary(days, dates, today, threshold);
+    const bars = dates.map((date) => ({ date, log: days[date], result: dayResult(days[date], date, today, threshold) }));
+    return { ...summary, bars, streak: currentStreak(days, today, threshold) };
   }, [days, today, threshold]);
 
-  // 26 weeks heatmap, columns are weeks ending this week.
-  const start = addDays(today, -(7 * 25 + fromKey(today).getDay()));
-  const weeks = Array.from({ length: 26 }, (_, w) => Array.from({ length: 7 }, (_, d) => addDays(start, w * 7 + d)));
-  const maxWeekday = Math.max(1, ...stats.weekdays.map((v) => v ?? 0));
-
   return (
-    <div className="mt-6">
-      <SectionTitle>Insights</SectionTitle>
-      <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-        <InsightTile icon={<Flame className="size-4" />} label="Current streak" value={`${stats.streak}d`} sub={`Best ${stats.best}d`} />
-        <InsightTile icon={<Target className="size-4" />} label="7-day average" value={`${stats.last7.avg}%`} sub={`${stats.last7.wins}W · ${stats.last7.losses}L`} />
-        <InsightTile icon={<Trophy className="size-4" />} label="30-day average" value={`${stats.last30.avg}%`} sub={`${stats.last30.wins}W · ${stats.last30.losses}L`} />
-        <InsightTile
-          icon={<Timer className="size-4" />}
-          label="Deep focus"
-          value={`${Math.floor(stats.focusTotal / 60)}h ${stats.focusTotal % 60}m`}
-          sub={`${stats.tasksDone} tasks conquered`}
-        />
+    <div className="mx-auto max-w-xl">
+      <SectionTop
+        label="Calendar"
+        actions={[
+          {
+            label: selected === today ? "Add task" : `Add task · ${formatShort(selected)}`,
+            placeholder: `Task for ${formatShort(selected)}`,
+            keepOpen: true,
+            onAdd: (text) => {
+              const parsed = parseQuickTask(text, selected);
+              if (parsed.title) addTask(parsed);
+            },
+          },
+        ]}
+      />
+
+      <div className="mb-5 flex items-center justify-center gap-4">
+        <button aria-label="Previous month" onClick={() => shift(-1)} className="flex size-8 items-center justify-center rounded-full text-muted hover:bg-surface-2 hover:text-fg">
+          <ChevronLeft className="size-4" />
+        </button>
+        <button
+          onClick={() => {
+            setMonth(today.slice(0, 7));
+            setSelected(today);
+          }}
+          title="Back to today"
+          className="min-w-40 text-[17px] font-semibold"
+        >
+          {new Date(y, mo - 1, 1).toLocaleDateString(undefined, { month: "long", year: "numeric" })}
+        </button>
+        <button aria-label="Next month" onClick={() => shift(1)} className="flex size-8 items-center justify-center rounded-full text-muted hover:bg-surface-2 hover:text-fg">
+          <ChevronRight className="size-4" />
+        </button>
       </div>
 
-      <div className="mt-4 grid grid-cols-1 gap-4 lg:grid-cols-5">
-        <Card className="min-w-0 lg:col-span-3">
-          <SectionTitle>Last 6 months</SectionTitle>
-          <div className="no-scrollbar overflow-x-auto">
-            <div className="flex w-max gap-[3px]">
-              {weeks.map((week) => (
-                <div key={week[0]} className="flex flex-col gap-[3px]">
-                  {week.map((date) => {
-                    const log = days[date];
-                    const has = log && log.total > 0 && date <= today;
-                    return (
-                      <div
-                        key={date}
-                        title={`${date}${has ? ` · ${log.pct}%` : ""}`}
-                        className={cn("size-3 rounded-[3px] sm:size-3.5", date > today && "opacity-0")}
-                        style={{ background: has ? heat(log.pct) : "var(--surface-2)" }}
-                      />
-                    );
-                  })}
-                </div>
-              ))}
-            </div>
-          </div>
-          <div className="mt-3 flex items-center gap-1.5 text-[10px] text-muted">
-            Less
-            {[0, 30, 60, 100].map((p) => (
-              <span key={p} className="size-3 rounded-[3px]" style={{ background: p ? heat(p) : "var(--surface-2)" }} />
-            ))}
-            More
-          </div>
-        </Card>
-        <Card className="lg:col-span-2">
-          <SectionTitle>Best days of the week</SectionTitle>
-          <div className="space-y-2">
-            {stats.weekdays.map((v, i) => (
-              <div key={WEEKDAYS[i]} className="flex items-center gap-3 text-xs">
-                <span className="w-8 text-muted">{WEEKDAYS[i]}</span>
-                <div className="h-2 flex-1 overflow-hidden rounded-full bg-surface-2">
-                  <div className="h-full rounded-full bg-accent" style={{ width: `${((v ?? 0) / maxWeekday) * 100}%` }} />
-                </div>
-                <span className="w-9 text-right tabular-nums">{v === null ? "–" : `${v}%`}</span>
-              </div>
-            ))}
-          </div>
-        </Card>
+      <div
+        className="mx-auto max-w-md"
+        onTouchStart={(e) => (touchX.current = e.touches[0].clientX)}
+        onTouchEnd={(e) => {
+          if (touchX.current === null) return;
+          const dx = e.changedTouches[0].clientX - touchX.current;
+          if (Math.abs(dx) > 60) shift(dx < 0 ? 1 : -1);
+          touchX.current = null;
+        }}
+      >
+        <div className="grid grid-cols-7 pb-2 text-center text-[11px] text-faint">
+          {WEEKDAYS.map((w) => (
+            <span key={w}>{w[0]}</span>
+          ))}
+        </div>
+        <div className="grid grid-cols-7 gap-1.5">
+          {cells.map((date) => {
+            const log = days[date];
+            const has = !!log && log.total > 0 && date <= today;
+            const planned = !!log && log.total > 0 && date > today;
+            const r = dayResult(log, date, today, threshold);
+            return (
+              <button
+                key={date}
+                onClick={() => setSelected(date)}
+                title={has ? `${log.pct}% · ${log.done}/${log.total}` : undefined}
+                style={has ? { background: dayFill(log.pct, r === "win") } : undefined}
+                className={cn(
+                  "flex aspect-square flex-col items-center justify-center gap-0.5 rounded-xl transition-[box-shadow,background-color]",
+                  !has && "hover:bg-surface",
+                  date === selected && "ring-1 ring-fg/70",
+                  fromKey(date).getMonth() !== mo - 1 && "opacity-25",
+                )}
+              >
+                <span
+                  className={cn(
+                    "flex size-7 items-center justify-center rounded-full text-[14px] tabular-nums",
+                    date === today ? "bg-fg font-semibold text-bg" : "text-fg",
+                  )}
+                >
+                  {fromKey(date).getDate()}
+                </span>
+                <span className={cn("flex h-3 items-center font-mono text-[10px] leading-3 tabular-nums", r === "win" ? "text-success" : "text-muted")}>
+                  {has ? `${log.pct}%` : planned ? <span className="size-1 rounded-full bg-muted" title={`${log.total} planned`} /> : ""}
+                </span>
+              </button>
+            );
+          })}
+        </div>
       </div>
+
+      <section className="mt-12">
+        <div className="mb-5 text-center">
+          <p className="text-[12px] text-faint">{sel.toLocaleDateString(undefined, { weekday: "long" })}</p>
+          <p className="text-[20px] font-semibold">{sel.toLocaleDateString(undefined, { month: "long", day: "numeric" })}</p>
+          {selLog && selLog.total > 0 && (
+            <p className={cn("mt-1 font-mono text-[12px] tabular-nums", RESULT_TEXT[selResult])}>
+              {selected > today ? (
+                `${selLog.total} planned`
+              ) : (
+                <>
+                  {selLog.pct}% · {selLog.done}/{selLog.total}
+                  {selSpent > 0 && ` · ${formatMinutes(selSpent)}`}
+                </>
+              )}
+            </p>
+          )}
+        </div>
+        <TaskList date={selected} emptyText="Nothing on this day." />
+      </section>
+
+      <section className="mt-16 border-t border-line pt-8">
+        <p className="mb-4 text-center text-[11px] font-medium tracking-[0.2em] text-faint uppercase">Last 30 days</p>
+        <div className="mx-auto flex h-16 max-w-md items-end gap-[3px]" aria-label="Daily completion, last 30 days">
+          {stats.bars.map(({ date, log, result }) => (
+            <button
+              key={date}
+              onClick={() => {
+                setSelected(date);
+                setMonth(date.slice(0, 7));
+              }}
+              title={`${formatShort(date)} · ${log && log.total ? `${log.pct}%` : "no tasks"}`}
+              className="flex h-full flex-1 items-end"
+            >
+              <span
+                className={cn("block w-full rounded-[2px]", result === "win" ? "bg-success" : log && log.total ? "bg-muted" : "bg-surface-3")}
+                style={{ height: log && log.total ? `${Math.max(6, log.pct)}%` : "6%" }}
+              />
+            </button>
+          ))}
+        </div>
+        <div className="mt-8 grid grid-cols-3 gap-4 text-center">
+          <Stat value={`${stats.avg}%`} label="average" />
+          <Stat value={`${stats.wins}/${stats.wins + stats.losses}`} label="successful days" />
+          <Stat value={`${stats.streak}d`} label="streak" />
+        </div>
+      </section>
     </div>
   );
 }
 
-function InsightTile({ icon, label, value, sub }: { icon: React.ReactNode; label: string; value: string; sub: string }) {
+function Stat({ value, label }: { value: string; label: string }) {
   return (
-    <Card className="p-4">
-      <div className="flex items-center gap-1.5 text-xs text-muted">
-        <span className="text-accent">{icon}</span>
-        {label}
-      </div>
-      <p className="mt-2 text-2xl font-semibold tabular-nums">{value}</p>
-      <p className="text-[11px] text-muted">{sub}</p>
-    </Card>
+    <div>
+      <p className="font-mono text-[22px] font-medium tabular-nums">{value}</p>
+      <p className="mt-1 text-[11px] text-faint">{label}</p>
+    </div>
   );
 }

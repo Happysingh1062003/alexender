@@ -31,10 +31,27 @@ export function parseYouTubeId(input: string): string | null {
   return null;
 }
 
-export const ytThumb = (id: string) => `https://i.ytimg.com/vi/${id}/mqdefault.jpg`;
+export const ytThumb = (id: string, size: "mq" | "hq" = "mq") => `https://i.ytimg.com/vi/${id}/${size}default.jpg`;
 
-export const extractTags = (text: string) =>
-  Array.from(new Set((text.match(/#[\w-]+/g) ?? []).map((t) => t.slice(1).toLowerCase())));
+/** "45m", "1h 20m". */
+export const formatMinutes = (min: number) => {
+  const h = Math.floor(min / 60);
+  const m = Math.round(min % 60);
+  return h ? (m ? `${h}h ${m}m` : `${h}h`) : `${m}m`;
+};
+
+/** "3:33", "1:02:10". */
+export const formatDuration = (sec: number) => {
+  const h = Math.floor(sec / 3600);
+  const m = Math.floor((sec % 3600) / 60);
+  const s = Math.floor(sec % 60);
+  const pad = (n: number) => String(n).padStart(2, "0");
+  return h ? `${h}:${pad(m)}:${pad(s)}` : `${m}:${pad(s)}`;
+};
+
+/** "1.6B", "24K". */
+export const formatCount = (n: number) =>
+  new Intl.NumberFormat(undefined, { notation: "compact", maximumFractionDigits: 1 }).format(n);
 
 const WEEKDAY_NAMES = ["sunday", "monday", "tuesday", "wednesday", "thursday", "friday", "saturday"];
 
@@ -103,26 +120,4 @@ export function downloadFile(name: string, content: string, type = "application/
   a.download = name;
   a.click();
   setTimeout(() => URL.revokeObjectURL(url), 1000);
-}
-
-/** Short chime via WebAudio — no asset files needed. */
-export function chime() {
-  try {
-    const ctx = new AudioContext();
-    [660, 880, 1320].forEach((freq, i) => {
-      const osc = ctx.createOscillator();
-      const gain = ctx.createGain();
-      osc.frequency.value = freq;
-      osc.type = "sine";
-      const t = ctx.currentTime + i * 0.18;
-      gain.gain.setValueAtTime(0.0001, t);
-      gain.gain.exponentialRampToValueAtTime(0.25, t + 0.02);
-      gain.gain.exponentialRampToValueAtTime(0.0001, t + 0.5);
-      osc.connect(gain).connect(ctx.destination);
-      osc.start(t);
-      osc.stop(t + 0.55);
-    });
-  } catch {
-    // audio unavailable
-  }
 }

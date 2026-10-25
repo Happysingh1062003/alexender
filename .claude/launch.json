@@ -1,6 +1,7 @@
 {
   "version": "0.0.1",
   "configurations": [
-    { "name": "alexender", "runtimeExecutable": "npm", "runtimeArgs": ["run", "dev"], "port": 3000 }
+    { "name": "alexender", "runtimeExecutable": "npm", "runtimeArgs": ["run", "dev"], "port": 3000 },
+    { "name": "alexender-prod", "runtimeExecutable": "npx", "runtimeArgs": ["next", "start", "-p", "3005"], "port": 3005, "autoPort": false }
   ]
 }
