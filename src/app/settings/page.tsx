@@ -10,7 +10,7 @@ import { exportBackup, importBackup } from "@/lib/backup";
 import { clearImages } from "@/lib/images";
 import { verifyPasscode } from "@/lib/lock";
 import { useClock, useStore } from "@/lib/store";
-import { resetEverywhere, syncNow, useSync } from "@/lib/sync";
+import { resetEverywhere, syncNow, useSync, makeThisDeviceTheSource } from "@/lib/sync";
 
 function useStorageInfo() {
   const [info, setInfo] = useState<{ persisted: boolean; usage: number } | null>(null);
@@ -189,7 +189,38 @@ function SyncCard() {
           </p>
         </div>
       </div>
+      {on && <MakeMatch />}
     </Card>
+  );
+}
+
+/** When devices disagree: keep this device's data and make every other device match it. */
+function MakeMatch() {
+  const [busy, setBusy] = useState(false);
+  const [done, setDone] = useState<string | null>(null);
+  return (
+    <div className="mt-5 border-t border-line pt-5 text-[13px]">
+      <p className="font-medium">Make every device match this one</p>
+      <p className="mt-0.5 leading-relaxed text-muted">
+        Replaces the data in the cloud and on your other devices with what is on this device right now. Use it on the device that has the data you want to keep.
+      </p>
+      <Button
+        size="sm"
+        variant="outline"
+        className="mt-3"
+        disabled={busy}
+        onClick={async () => {
+          if (!confirm("Use this device's data everywhere? Data on your other devices that isn't on this one will be removed.")) return;
+          setBusy(true);
+          const ok = await makeThisDeviceTheSource();
+          setBusy(false);
+          setDone(ok ? "Done — your other devices will match this one the next time they open Alexander." : "Couldn't reach the cloud. Try again when you're online.");
+        }}
+      >
+        {busy ? "Saving…" : "Use this device's data everywhere"}
+      </Button>
+      {done && <p className="mt-2 text-[12px] text-muted">{done}</p>}
+    </div>
   );
 }
 

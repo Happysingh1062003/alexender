@@ -1,7 +1,7 @@
 "use client";
 
 import { create } from "zustand";
-import { clearImages, getImageBlob } from "./images";
+import { clearImages, getImageBlob, getOrFetchImage } from "./images";
 import { mergeData, stableStringify } from "./merge";
 import { allImageIds, DATA_KEYS, normalize, pickData, useStore, type Data } from "./store";
 import { uid } from "./utils";
@@ -32,6 +32,9 @@ const META_KEY = "alex-sync";
 // loading screen, so each one gives up after this long and counts as offline.
 const REQUEST_TIMEOUT_MS = 15_000;
 const UPLOADED_KEY = "alex-uploaded-images";
+// Generations started by a deliberate reset ("use this device everywhere", import, erase) carry
+// this prefix, so even a device that has never synced takes that copy instead of merging its own.
+const RESET_PREFIX = "r-";
 
 function readMeta(): { version: number; epoch?: string } {
   try {
@@ -140,8 +143,10 @@ async function reconcile(doc: ServerDoc | null, attempt = 0): Promise<void> {
     epoch ??= uid();
   } else {
     const remote = normalize(doc.data);
-    if (meta.epoch && doc.data.epoch && doc.data.epoch !== meta.epoch) {
-      merged = remote; // another device reset everything
+    const serverEpoch = doc.data.epoch;
+    const resetElsewhere = !!serverEpoch && serverEpoch !== meta.epoch && (!!meta.epoch || serverEpoch.startsWith(RESET_PREFIX));
+    if (resetElsewhere) {
+      merged = remote; // another device replaced everything
       epoch = doc.data.epoch;
       writeUploaded(new Set());
       clearImages().catch(() => {});
@@ -214,11 +219,13 @@ async function uploadImages(data: Data) {
  */
 export async function resetEverywhere(data: Partial<Data>) {
   const fresh = normalize(data);
+  // The server's photos are replaced too, so first make sure this device holds every photo it uses.
+  if (useSync.getState().status !== "off") for (const id of allImageIds(fresh)) await getOrFetchImage(id);
   apply(fresh);
   writeUploaded(new Set());
   if (useSync.getState().status === "off") return true;
   await chain;
-  const epoch = uid();
+  const epoch = RESET_PREFIX + uid();
   try {
     const res = await fetch("/api/sync?reset=1", {
       method: "PUT",
@@ -234,4 +241,13 @@ export async function resetEverywhere(data: Partial<Data>) {
   } catch {
     return false;
   }
+}
+
+/**
+ * Make this device's data the only copy: the server and every other device take it, and their
+ * own differing data is dropped. Returns false when sync isn't available or the save failed.
+ */
+export async function makeThisDeviceTheSource() {
+  if (useSync.getState().status === "off") return false;
+  return resetEverywhere(pickData(useStore.getState()));
 }

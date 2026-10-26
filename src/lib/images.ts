@@ -72,6 +72,9 @@ async function fetchRemoteImage(id: string): Promise<Blob | null> {
 }
 
 /** Removes every stored image — used when all data is erased. */
+/** A photo's data from this device, or from the server when only another device had it. */
+export const getOrFetchImage = async (id: string) => (await getImageBlob(id)) ?? (await fetchRemoteImage(id));
+
 export async function clearImages() {
   for (const url of urlCache.values()) URL.revokeObjectURL(url);
   urlCache.clear();

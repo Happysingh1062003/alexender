@@ -47,6 +47,8 @@ Every device keeps a local copy (instant, works offline) and syncs in the backgr
 
 Sync is refused online unless `ALEXANDER_PASSWORD` is set, so your data is never exposed without a password. Settings → *Sync across devices* shows the current status.
 
+**If two devices show different data:** open Alexander on the device that has the data you want to keep, go to Settings → Sync across devices, and tap **Use this device's data everywhere**. Every other device takes that copy the next time it opens (even one that has never synced). Both devices must use the same address.
+
 ## Privacy
 
 - **Passcode** (Settings → Privacy, or during setup): asked every time the app opens and after 5 minutes in the background. Stored only as a salted hash.
