@@ -10,6 +10,7 @@ import {
   Flag,
   Headphones,
   Hourglass,
+  Landmark,
   ListChecks,
   Settings2,
   Sun,
@@ -39,5 +40,6 @@ export const TodoIcon = thin(ListChecks);
 export const DontIcon = thin(Ban);
 export const PodcastsIcon = thin(Headphones);
 export const PlansIcon = thin(ClipboardList);
+export const StoriesIcon = thin(Landmark);
 export const SettingsIcon = thin(Settings2);
 export const MoreIcon = thin(Ellipsis);

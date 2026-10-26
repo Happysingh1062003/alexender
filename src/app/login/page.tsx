@@ -34,7 +34,7 @@ export default function LoginPage() {
         }}
       >
         <Statue priority className="mx-auto mb-6 h-36 w-auto" />
-        <h1 className="text-[28px] leading-none font-semibold tracking-tight">Alexander</h1>
+        <h1 className="text-[28px] leading-none font-semibold tracking-tight" lang="grc">Ἀλέξανδρος</h1>
         <p className="mt-1 mb-8 text-[13px] text-muted">Private. Enter your password to continue.</p>
         <Input
           autoFocus

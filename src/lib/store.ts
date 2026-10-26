@@ -5,7 +5,7 @@ import { create } from "zustand";
 import { createJSONStorage, persist, type StateStorage } from "zustand/middleware";
 import { todayKey } from "./date";
 import { deleteImages } from "./images";
-import type { Book, BucketItem, DayLog, Goal, JournalEntry, ListItem, Mission, Plan, Priority, Settings, Task, Video } from "./types";
+import type { Book, BucketItem, DayLog, Goal, JournalEntry, ListItem, Mission, MyStory, Plan, Priority, Settings, Task, Video } from "./types";
 import { pct, uid } from "./utils";
 
 const idbStorage: StateStorage = {
@@ -19,7 +19,7 @@ const idbStorage: StateStorage = {
 };
 
 /** Collections whose records sync individually. Tombstone keys are `${kind}:${id}`. */
-export type Kind = "tasks" | "missions" | "goals" | "videos" | "books" | "bucket" | "todos" | "donts" | "podcasts" | "plans" | "journal";
+export type Kind = "tasks" | "missions" | "goals" | "videos" | "books" | "bucket" | "todos" | "donts" | "podcasts" | "plans" | "myStories" | "journal";
 
 /** Collections that can be reordered by dragging. */
 export type OrderedKind = "tasks" | "missions" | "goals" | "videos" | "books" | "bucket" | "todos" | "donts" | "podcasts" | "plans";
@@ -39,13 +39,14 @@ export interface Data {
   donts: ListItem[];
   podcasts: ListItem[];
   plans: Plan[];
+  myStories: MyStory[];
   journal: Record<string, JournalEntry>;
   settings: Settings;
   /** When each record was deleted, so a delete on one device removes it everywhere. */
   deleted: Record<string, number>;
 }
 
-export const DATA_KEYS = ["tasks", "days", "missions", "goals", "videos", "books", "bucket", "todos", "donts", "podcasts", "plans", "journal", "settings", "deleted"] as const;
+export const DATA_KEYS = ["tasks", "days", "missions", "goals", "videos", "books", "bucket", "todos", "donts", "podcasts", "plans", "myStories", "journal", "settings", "deleted"] as const;
 
 const defaultSettings: Settings = {
   name: "",
@@ -66,6 +67,7 @@ const initialData: Data = {
   donts: [],
   podcasts: [],
   plans: [],
+  myStories: [],
   journal: {},
   settings: defaultSettings,
   deleted: {},
@@ -113,6 +115,10 @@ interface Actions {
   addPlan: (title: string) => string;
   updatePlan: (id: string, patch: Partial<Plan>) => void;
   deletePlan: (id: string) => void;
+
+  addMyStory: (story: Omit<MyStory, "id" | "createdAt" | "updatedAt">) => string;
+  updateMyStory: (id: string, patch: Partial<MyStory>) => void;
+  deleteMyStory: (id: string) => void;
 
   /** Save a new manual order: `ids` in their new sequence. */
   reorder: (kind: OrderedKind, ids: string[]) => void;
@@ -179,6 +185,7 @@ export function normalize(p: Partial<Data>): Data {
     donts: p.donts ?? [],
     podcasts: p.podcasts ?? [],
     plans: p.plans ?? [],
+    myStories: p.myStories ?? [],
     journal: p.journal ?? {},
     settings,
     deleted: p.deleted ?? {},
@@ -380,6 +387,19 @@ export const useStore = create<Store>()(
       updatePlan: (id, patch) => setState((s) => ({ plans: patchById(s.plans, id, patch) })),
       deletePlan: (id) => setState((s) => ({ plans: s.plans.filter((p) => p.id !== id), deleted: tombstone(s.deleted, "plans", id) })),
 
+      addMyStory: (story) => {
+        const id = uid();
+        const now = Date.now();
+        setState((s) => ({ myStories: [...s.myStories, { ...story, id, createdAt: now, updatedAt: now }] }));
+        return id;
+      },
+      updateMyStory: (id, patch) => setState((s) => ({ myStories: patchById(s.myStories, id, patch) })),
+      deleteMyStory: (id) => {
+        const story = getState().myStories.find((x) => x.id === id);
+        if (story?.imageId) deleteImages([story.imageId]);
+        setState((s) => ({ myStories: s.myStories.filter((x) => x.id !== id), deleted: tombstone(s.deleted, "myStories", id) }));
+      },
+
       restore: (kind, record) =>
         setState((s) => {
           const deleted = { ...s.deleted };
@@ -434,8 +454,8 @@ export const useStore = create<Store>()(
 
 /** The persisted/synced part of the store. */
 export function pickData(s: Data): Data {
-  const { tasks, days, missions, goals, videos, books, bucket, todos, donts, podcasts, plans, journal, settings, deleted } = s;
-  return { tasks, days, missions, goals, videos, books, bucket, todos, donts, podcasts, plans, journal, settings, deleted };
+  const { tasks, days, missions, goals, videos, books, bucket, todos, donts, podcasts, plans, myStories, journal, settings, deleted } = s;
+  return { tasks, days, missions, goals, videos, books, bucket, todos, donts, podcasts, plans, myStories, journal, settings, deleted };
 }
 
 /** Every image id referenced anywhere — used for backups and photo sync. */
@@ -444,6 +464,7 @@ export const allImageIds = (s: Data) => [
   ...s.goals.flatMap((g) => g.images),
   ...s.books.flatMap((b) => (b.coverId ? [b.coverId] : [])),
   ...s.bucket.flatMap((b) => (b.imageId ? [b.imageId] : [])),
+  ...(s.myStories ?? []).flatMap((x) => (x.imageId ? [x.imageId] : [])),
 ];
 
 /** Manual order, falling back to creation time for records saved before ordering existed. */

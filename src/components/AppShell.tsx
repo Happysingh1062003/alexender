@@ -164,8 +164,8 @@ function Sidebar() {
     <aside className="fixed inset-y-0 left-0 z-30 hidden w-56 flex-col border-r border-line bg-bg px-3 py-5 lg:flex">
       <Link href="/" className="mb-7 flex items-center gap-2.5 px-2.5">
         <Logo className="size-6" />
-        <span className="text-[16px] font-semibold tracking-tight">
-          Alexander
+        <span lang="grc" className="text-[16px] font-semibold tracking-tight">
+          Ἀλέξανδρος
         </span>
       </Link>
       <nav className="-mx-1 flex min-h-0 flex-1 flex-col gap-px overflow-y-auto px-1 [scrollbar-width:none]">

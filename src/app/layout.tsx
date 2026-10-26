@@ -3,13 +3,14 @@ import { Inter } from "next/font/google";
 import { AppShell } from "@/components/AppShell";
 import "./globals.css";
 
-// One professional typeface for everything (Greek for the coin's inscription).
-const inter = Inter({ variable: "--font-inter", subsets: ["latin", "greek"] });
+// One professional typeface for everything. Greek covers the coin's inscription; Greek
+// extended covers the breathing marks in the Ἀλέξανδρος wordmark.
+const inter = Inter({ variable: "--font-inter", subsets: ["latin", "greek", "greek-ext"] });
 
 export const metadata: Metadata = {
-  title: { default: "Alexander", template: "%s · Alexander" },
+  title: { default: "Ἀλέξανδρος", template: "%s · Ἀλέξανδρος" },
   description: "Your private command center — plan the day, conquer the mission.",
-  appleWebApp: { capable: true, title: "Alexander", statusBarStyle: "black-translucent" },
+  appleWebApp: { capable: true, title: "Ἀλέξανδρος", statusBarStyle: "black-translucent" },
 };
 
 export const viewport: Viewport = {

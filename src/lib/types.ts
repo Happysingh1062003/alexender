@@ -126,6 +126,21 @@ export interface Plan {
   order: number;
 }
 
+/** A story of a great person that you added yourself, with their picture. */
+export interface MyStory {
+  id: string;
+  person: string;
+  title: string;
+  /** The story; blank lines separate paragraphs. */
+  story: string;
+  imageId?: string;
+  when?: string;
+  lesson?: string;
+  source?: string;
+  createdAt: number;
+  updatedAt?: number;
+}
+
 export interface BucketItem {
   id: string;
   title: string;
