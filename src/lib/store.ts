@@ -6,6 +6,7 @@ import { createJSONStorage, persist, type StateStorage } from "zustand/middlewar
 import { todayKey } from "./date";
 import { deleteImages } from "./images";
 import type { Book, BucketItem, DayLog, Goal, JournalEntry, ListItem, Mission, MyStory, Plan, Priority, Settings, Task, Video } from "./types";
+import { fillStrategy, type Strategy } from "./strategy";
 import { pct, uid } from "./utils";
 
 const idbStorage: StateStorage = {
@@ -19,10 +20,10 @@ const idbStorage: StateStorage = {
 };
 
 /** Collections whose records sync individually. Tombstone keys are `${kind}:${id}`. */
-export type Kind = "tasks" | "missions" | "goals" | "videos" | "books" | "bucket" | "todos" | "donts" | "podcasts" | "plans" | "myStories" | "journal";
+export type Kind = "tasks" | "missions" | "goals" | "videos" | "books" | "bucket" | "todos" | "donts" | "podcasts" | "plans" | "myStories" | "strategies" | "journal";
 
 /** Collections that can be reordered by dragging. */
-export type OrderedKind = "tasks" | "missions" | "goals" | "videos" | "books" | "bucket" | "todos" | "donts" | "podcasts" | "plans";
+export type OrderedKind = "tasks" | "missions" | "goals" | "videos" | "books" | "bucket" | "todos" | "donts" | "podcasts" | "plans" | "strategies";
 
 /** The simple lists that share one shape (ListItem). */
 export type ListKind = "todos" | "donts" | "podcasts";
@@ -40,13 +41,14 @@ export interface Data {
   podcasts: ListItem[];
   plans: Plan[];
   myStories: MyStory[];
+  strategies: Strategy[];
   journal: Record<string, JournalEntry>;
   settings: Settings;
   /** When each record was deleted, so a delete on one device removes it everywhere. */
   deleted: Record<string, number>;
 }
 
-export const DATA_KEYS = ["tasks", "days", "missions", "goals", "videos", "books", "bucket", "todos", "donts", "podcasts", "plans", "myStories", "journal", "settings", "deleted"] as const;
+export const DATA_KEYS = ["tasks", "days", "missions", "goals", "videos", "books", "bucket", "todos", "donts", "podcasts", "plans", "myStories", "strategies", "journal", "settings", "deleted"] as const;
 
 const defaultSettings: Settings = {
   name: "",
@@ -68,6 +70,7 @@ const initialData: Data = {
   podcasts: [],
   plans: [],
   myStories: [],
+  strategies: [],
   journal: {},
   settings: defaultSettings,
   deleted: {},
@@ -119,6 +122,10 @@ interface Actions {
   addMyStory: (story: Omit<MyStory, "id" | "createdAt" | "updatedAt">) => string;
   updateMyStory: (id: string, patch: Partial<MyStory>) => void;
   deleteMyStory: (id: string) => void;
+
+  addStrategy: (title: string) => string;
+  updateStrategy: (id: string, patch: Partial<Strategy>) => void;
+  deleteStrategy: (id: string) => void;
 
   /** Save a new manual order: `ids` in their new sequence. */
   reorder: (kind: OrderedKind, ids: string[]) => void;
@@ -186,6 +193,7 @@ export function normalize(p: Partial<Data>): Data {
     podcasts: p.podcasts ?? [],
     plans: p.plans ?? [],
     myStories: p.myStories ?? [],
+    strategies: (p.strategies ?? []).map(fillStrategy),
     journal: p.journal ?? {},
     settings,
     deleted: p.deleted ?? {},
@@ -394,6 +402,15 @@ export const useStore = create<Store>()(
         return id;
       },
       updateMyStory: (id, patch) => setState((s) => ({ myStories: patchById(s.myStories, id, patch) })),
+      addStrategy: (title) => {
+        const id = uid();
+        const now = Date.now();
+        setState((s) => ({ strategies: [...s.strategies, fillStrategy({ id, title, createdAt: now, updatedAt: now, order: nextOrder(s.strategies) })] }));
+        return id;
+      },
+      updateStrategy: (id, patch) => setState((s) => ({ strategies: patchById(s.strategies, id, patch) })),
+      deleteStrategy: (id) => setState((s) => ({ strategies: s.strategies.filter((x) => x.id !== id), deleted: tombstone(s.deleted, "strategies", id) })),
+
       deleteMyStory: (id) => {
         const story = getState().myStories.find((x) => x.id === id);
         if (story?.imageId) deleteImages([story.imageId]);
@@ -454,8 +471,8 @@ export const useStore = create<Store>()(
 
 /** The persisted/synced part of the store. */
 export function pickData(s: Data): Data {
-  const { tasks, days, missions, goals, videos, books, bucket, todos, donts, podcasts, plans, myStories, journal, settings, deleted } = s;
-  return { tasks, days, missions, goals, videos, books, bucket, todos, donts, podcasts, plans, myStories, journal, settings, deleted };
+  const { tasks, days, missions, goals, videos, books, bucket, todos, donts, podcasts, plans, myStories, strategies, journal, settings, deleted } = s;
+  return { tasks, days, missions, goals, videos, books, bucket, todos, donts, podcasts, plans, myStories, strategies, journal, settings, deleted };
 }
 
 /** Every image id referenced anywhere — used for backups and photo sync. */

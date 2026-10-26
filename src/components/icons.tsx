@@ -12,6 +12,7 @@ import {
   Hourglass,
   Landmark,
   ListChecks,
+  Network,
   Settings2,
   Sun,
   type LucideProps,
@@ -41,5 +42,6 @@ export const DontIcon = thin(Ban);
 export const PodcastsIcon = thin(Headphones);
 export const PlansIcon = thin(ClipboardList);
 export const StoriesIcon = thin(Landmark);
+export const StrategyIcon = thin(Network);
 export const SettingsIcon = thin(Settings2);
 export const MoreIcon = thin(Ellipsis);
