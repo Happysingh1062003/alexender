@@ -233,16 +233,15 @@ function TopBar() {
         </p>
         <p className="hidden text-[13px] text-muted lg:block">{date}</p>
         <div className="flex-1" />
-        {(syncStatus === "offline" || syncStatus === "error") && (
+        {/* Says plainly when this device isn't sharing data, so a mismatch is never a mystery. */}
+        {(syncStatus === "off" || syncStatus === "offline" || syncStatus === "error") && (
           <Link
             href="/settings"
-            title={
-              syncStatus === "offline"
-                ? "Offline — changes will sync when you're back online"
-                : (syncMessage ?? "Sync problem — see Settings")
-            }
+            title={syncStatus === "offline" ? "Offline — changes will sync when you're back online" : (syncMessage ?? "Sync problem — see Settings")}
+            className="flex items-center gap-1.5 rounded-full px-2 py-1 text-[12px] text-faint transition-colors hover:bg-surface-2 hover:text-fg"
           >
-            <CloudOff aria-label="Not synced" className="size-4 text-faint" />
+            <CloudOff aria-hidden className="size-4" />
+            {syncStatus === "off" ? "Not syncing" : syncStatus === "offline" ? "Offline" : "Sync issue"}
           </Link>
         )}
         {showProgress && (
