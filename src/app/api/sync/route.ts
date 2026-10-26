@@ -1,10 +1,10 @@
 import type { NextRequest } from "next/server";
-import { syncStorage } from "@/lib/server/guard";
+import { databaseError, syncStorage } from "@/lib/server/guard";
 
 const MAX_BYTES = 4 * 1024 * 1024; // stays under hosting request limits
 
 /** The latest synced data and its version. */
-export async function GET() {
+async function handleGET() {
   const storage = syncStorage();
   if (storage instanceof Response) return storage;
   return Response.json({ storage: storage.kind, doc: await storage.getDoc() });
@@ -14,7 +14,7 @@ export async function GET() {
  * Save data that was based on `baseVersion`. If another device saved first, responds 409 with the
  * current copy so the client can merge and try again. `?reset=1` replaces everything instead.
  */
-export async function PUT(request: NextRequest) {
+async function handlePUT(request: NextRequest) {
   const storage = syncStorage();
   if (storage instanceof Response) return storage;
 
@@ -39,4 +39,20 @@ export async function PUT(request: NextRequest) {
 
   const result = await storage.putDoc(data, Number(body.baseVersion) || 0);
   return result.ok ? Response.json({ version: result.version }) : Response.json({ current: result.current }, { status: 409 });
+}
+
+export async function GET() {
+  try {
+    return await handleGET();
+  } catch (error) {
+    return databaseError(error);
+  }
+}
+
+export async function PUT(request: NextRequest) {
+  try {
+    return await handlePUT(request);
+  } catch (error) {
+    return databaseError(error);
+  }
 }

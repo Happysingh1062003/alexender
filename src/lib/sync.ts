@@ -174,6 +174,12 @@ async function sync() {
       error?: string;
       code?: string;
     };
+    if (body.code === "db-error") {
+      // Set up correctly but the database didn't answer: a temporary problem, so retry soon.
+      useSync.setState({ status: "error", code: body.code, message: body.error });
+      retrySoon();
+      return;
+    }
     useSync.setState({ status: "off", code: body.code, message: body.error });
     return;
   }

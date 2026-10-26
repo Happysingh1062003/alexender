@@ -186,7 +186,7 @@ function SyncCard() {
           <p className="text-muted">
             {on
               ? storage === "cloud"
-                ? "Your data is saved in your private cloud database. Open Alexander on any device and sign in with your website password."
+                ? "Your data is saved in your Neon database. Open this same address on any device and sign in with your website password to see it."
                 : "Your data is saved on this computer, shared by every device that opens this same address. A different address — like your Vercel site — keeps its own separate copy."
               : (message ?? "Sync isn't set up on this site.")}
           </p>

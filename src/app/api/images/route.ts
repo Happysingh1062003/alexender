@@ -1,12 +1,12 @@
 import type { NextRequest } from "next/server";
-import { syncStorage } from "@/lib/server/guard";
+import { databaseError, syncStorage } from "@/lib/server/guard";
 
 const MAX_BYTES = 4 * 1024 * 1024;
 
 const validId = (id: string | null): id is string => !!id && /^[\w-]{8,64}$/.test(id);
 
 /** A synced photo. Ids are unique per upload, so responses can be cached forever. */
-export async function GET(request: NextRequest) {
+async function handleGET(request: NextRequest) {
   const storage = syncStorage();
   if (storage instanceof Response) return storage;
   const id = request.nextUrl.searchParams.get("id");
@@ -19,7 +19,7 @@ export async function GET(request: NextRequest) {
   });
 }
 
-export async function PUT(request: NextRequest) {
+async function handlePUT(request: NextRequest) {
   const storage = syncStorage();
   if (storage instanceof Response) return storage;
   const id = request.nextUrl.searchParams.get("id");
@@ -34,11 +34,35 @@ export async function PUT(request: NextRequest) {
   return Response.json({ ok: true });
 }
 
-export async function DELETE(request: NextRequest) {
+async function handleDELETE(request: NextRequest) {
   const storage = syncStorage();
   if (storage instanceof Response) return storage;
   const id = request.nextUrl.searchParams.get("id");
   if (!validId(id)) return Response.json({ error: "Invalid id" }, { status: 400 });
   await storage.deleteImage(id);
   return Response.json({ ok: true });
+}
+
+export async function GET(request: NextRequest) {
+  try {
+    return await handleGET(request);
+  } catch (error) {
+    return databaseError(error);
+  }
+}
+
+export async function PUT(request: NextRequest) {
+  try {
+    return await handlePUT(request);
+  } catch (error) {
+    return databaseError(error);
+  }
+}
+
+export async function DELETE(request: NextRequest) {
+  try {
+    return await handleDELETE(request);
+  } catch (error) {
+    return databaseError(error);
+  }
 }

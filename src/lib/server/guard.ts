@@ -15,3 +15,12 @@ export function syncStorage(): Storage | Response {
   }
   return storage;
 }
+
+/**
+ * A database call failed (unreachable, wrong credentials). Reported plainly so Settings can show
+ * it, without echoing the driver's message — that can contain connection details.
+ */
+export function databaseError(error: unknown) {
+  console.error("Alexander sync: database error", error);
+  return Response.json({ code: "db-error", error: "Couldn't reach the database — retrying. Check the database connection in Vercel if this lasts." }, { status: 503 });
+}

@@ -35,11 +35,16 @@ type Query = (text: string, params?: unknown[]) => Promise<Record<string, unknow
 
 export function postgresStorage(query: Query): Storage {
   let ready: Promise<unknown> | undefined;
+  // Creates the tables once per server instance. A failure (database briefly unreachable) is not
+  // remembered, so the next request tries again instead of failing until the server restarts.
   const init = () =>
     (ready ??= (async () => {
       await query(`create table if not exists alexender_doc (id int primary key, data jsonb not null, version bigint not null)`);
       await query(`create table if not exists alexender_images (id text primary key, type text not null, data text not null)`);
-    })());
+    })().catch((error) => {
+      ready = undefined;
+      throw error;
+    }));
 
   const getDoc = async (): Promise<Doc | null> => {
     await init();
@@ -169,13 +174,30 @@ export function fileStorage(dir: string): Storage {
 
 let storage: Storage | null | undefined;
 
+const isPostgresUrl = (value?: string) => !!value && /^postgres(ql)?:\/\//i.test(value.trim());
+
+/**
+ * The database connection string. Vercel's Neon integration sets DATABASE_URL (and POSTGRES_URL);
+ * when a name prefix was chosen while connecting, the same variables carry it (e.g.
+ * STORAGE_DATABASE_URL), so those are found too.
+ */
+export function databaseUrl(env: Record<string, string | undefined> = process.env): string | undefined {
+  for (const name of ["DATABASE_URL", "POSTGRES_URL", "NEON_DATABASE_URL", "DATABASE_URL_UNPOOLED", "POSTGRES_URL_NON_POOLING"]) {
+    if (isPostgresUrl(env[name])) return env[name]!.trim();
+  }
+  const prefixed = Object.keys(env)
+    .filter((name) => /_(DATABASE_URL|POSTGRES_URL)$/.test(name) && isPostgresUrl(env[name]))
+    .sort();
+  return prefixed.length ? env[prefixed[0]]!.trim() : undefined;
+}
+
 /**
  * Neon when a database URL is configured (cloud). Otherwise a `.data` folder next to the app,
  * except on Vercel, whose servers can't keep files — there sync stays off until a database is added.
  */
 export function getStorage(): Storage | null {
   if (storage !== undefined) return storage;
-  const url = process.env.DATABASE_URL || process.env.POSTGRES_URL;
+  const url = databaseUrl();
   if (url) {
     const sql = neon(url);
     storage = postgresStorage((text, params) => sql.query(text, params) as Promise<Record<string, unknown>[]>);
