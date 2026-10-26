@@ -28,6 +28,9 @@ export const useSync = create<{
 type ServerDoc = { data: Partial<Data> & { epoch?: string }; version: number };
 
 const META_KEY = "alex-sync";
+// A request that never answers would stall every later sync and keep a new device on the
+// loading screen, so each one gives up after this long and counts as offline.
+const REQUEST_TIMEOUT_MS = 15_000;
 const UPLOADED_KEY = "alex-uploaded-images";
 
 function readMeta(): { version: number; epoch?: string } {
@@ -99,7 +102,7 @@ async function sync() {
 
   let res: Response;
   try {
-    res = await fetch("/api/sync", { cache: "no-store" });
+    res = await fetch("/api/sync", { cache: "no-store", signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS) });
   } catch {
     useSync.setState({ status: "offline" });
     return;
@@ -162,6 +165,7 @@ async function reconcile(doc: ServerDoc | null, attempt = 0): Promise<void> {
         headers: { "Content-Type": "application/json" },
         body,
         keepalive: body.length < 60_000, // lets a small save finish while the app is closing
+        signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
       });
     } catch {
       useSync.setState({ status: "offline" });

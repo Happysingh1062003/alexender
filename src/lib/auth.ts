@@ -1,5 +1,5 @@
 /*
- * Optional website password. When ALEXENDER_PASSWORD is set, every page requires a session
+ * Optional website password. When ALEXANDER_PASSWORD is set, every page requires a session
  * cookie whose value is an HMAC of that password — so changing the password signs everyone out.
  * Used by both the proxy and the /api/auth route (server only).
  */
@@ -7,7 +7,8 @@
 export const SESSION_COOKIE = "alex_session";
 export const SESSION_MAX_AGE = 60 * 60 * 24 * 30; // 30 days
 
-export const sitePassword = () => process.env.ALEXENDER_PASSWORD || "";
+// The old spelling is still read, so a password set before the rename keeps working.
+export const sitePassword = () => process.env.ALEXANDER_PASSWORD || process.env.ALEXENDER_PASSWORD || "";
 
 export async function sessionToken(password: string) {
   const enc = new TextEncoder();

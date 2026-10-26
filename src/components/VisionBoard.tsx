@@ -1,224 +1,329 @@
 "use client";
 
-import { ChevronLeft, ChevronRight, ImagePlus, Pencil, Trash2, X } from "lucide-react";
-import { useCallback, useEffect, useRef, useState, type ReactNode } from "react";
+import {
+  ChevronLeft,
+  ChevronRight,
+  ImagePlus,
+  Pause,
+  Play,
+  X,
+} from "lucide-react";
+import {
+  useCallback,
+  useEffect,
+  useRef,
+  useState,
+  type ReactNode,
+} from "react";
 import { createPortal } from "react-dom";
 import { saveImages } from "@/lib/images";
+import { useBackToClose } from "@/lib/useBackToClose";
 import { cn } from "@/lib/utils";
-import { IconButton, ImageUploadButton, StoredImage, Textarea } from "./ui";
+import { IconButton, ImageUploadButton, StoredImage } from "./ui";
+
+const SLIDE_MS = 6000;
 
 /**
- * Full-screen board for a mission or goal: its words big at the top, every image below,
- * upload right there, tap an image to see it full size.
+ * A mission or goal, full screen: its images one at a time — swipe, tap the edges or use the
+ * arrow keys; it moves on by itself until you touch it. Editing and removing images live in Settings.
  */
 export function VisionBoard({
   label,
   title,
-  onTitleChange,
   images,
   onAddImages,
-  onRemoveImage,
-  onDelete,
   onClose,
   children,
 }: {
   label: string;
   title: string;
-  onTitleChange: (title: string) => void;
   images: string[];
   onAddImages: (ids: string[]) => void;
-  onRemoveImage: (id: string) => void;
-  onDelete: () => void;
   onClose: () => void;
+  /** Extra lines under the title, e.g. a goal's why and deadline. */
   children?: ReactNode;
 }) {
-  const [viewing, setViewing] = useState<number | null>(null);
-  const [editing, setEditing] = useState(false);
+  const [index, setIndex] = useState(0);
+  const [playing, setPlaying] = useState(true);
+  const [dx, setDx] = useState(0);
   const [dragging, setDragging] = useState(false);
-  const [uploading, setUploading] = useState(false);
+  const [dropping, setDropping] = useState(false);
+  const start = useRef<{ x: number; y: number; t: number } | null>(null);
+  const width = useRef(1);
+  const count = images.length;
+  const current = Math.min(index, Math.max(0, count - 1));
+  useBackToClose(true, onClose);
 
-  const upload = async (files: FileList | File[]) => {
-    setUploading(true);
-    const ids = await saveImages(files);
-    setUploading(false);
-    if (ids.length) onAddImages(ids);
-  };
-
-  useEffect(() => {
-    const onKey = (e: KeyboardEvent) => e.key === "Escape" && viewing === null && onClose();
-    document.addEventListener("keydown", onKey);
-    document.body.style.overflow = "hidden";
-    return () => {
-      document.removeEventListener("keydown", onKey);
-      document.body.style.overflow = "";
-    };
-  }, [onClose, viewing]);
-
-  return createPortal(
-    <div
-      className="animate-fade fixed inset-0 z-50 overflow-y-auto bg-black"
-      onDragOver={(e) => {
-        if (!e.dataTransfer.types.includes("Files")) return;
-        e.preventDefault();
-        setDragging(true);
-      }}
-      onDragLeave={(e) => e.currentTarget === e.target && setDragging(false)}
-      onDrop={(e) => {
-        e.preventDefault();
-        setDragging(false);
-        if (e.dataTransfer.files.length) upload(e.dataTransfer.files);
-      }}
-    >
-      {dragging && (
-        <div className="pointer-events-none fixed inset-3 z-20 flex items-center justify-center rounded-3xl border-2 border-dashed border-fg/40 bg-black/70 text-[15px] text-fg">
-          Drop images to add them
-        </div>
-      )}
-      <div className="sticky top-0 z-10 flex items-center gap-2 bg-black/80 px-3 pt-[max(0.75rem,env(safe-area-inset-top))] pb-2 backdrop-blur-xl sm:px-6">
-        <IconButton label="Close" onClick={onClose} className="size-10 text-fg">
-          <X className="size-5" />
-        </IconButton>
-        <span className="flex-1 text-[11px] font-medium tracking-[0.14em] text-faint uppercase">{label}</span>
-        <ImageUploadButton plain onAdd={onAddImages} className="h-9 rounded-lg bg-fg px-3.5 text-[13px] font-medium text-bg hover:bg-white">
-          <ImagePlus className="size-4" /> {uploading ? "Adding…" : "Upload images"}
-        </ImageUploadButton>
-        <IconButton label={`Delete ${label.toLowerCase()}`} onClick={onDelete} className="size-10 hover:text-danger">
-          <Trash2 className="size-4" />
-        </IconButton>
-      </div>
-
-      <div className="mx-auto max-w-5xl px-5 pt-6 pb-[max(3rem,env(safe-area-inset-bottom))] sm:px-8 sm:pt-10">
-        {editing ? (
-          <Textarea
-            autoFocus
-            rows={3}
-            defaultValue={title}
-            onBlur={(e) => {
-              if (e.target.value.trim()) onTitleChange(e.target.value.trim());
-              setEditing(false);
-            }}
-            className="border-line-strong bg-surface-2 text-2xl leading-snug font-semibold sm:text-4xl"
-          />
-        ) : (
-          <div className="group flex items-start gap-3">
-            <h1 className="min-w-0 flex-1 text-3xl leading-[1.12] font-semibold tracking-tight whitespace-pre-wrap sm:text-5xl">{title}</h1>
-            <IconButton label="Edit text" onClick={() => setEditing(true)} className="mt-1 size-9 sm:opacity-0 sm:group-hover:opacity-100">
-              <Pencil className="size-4" />
-            </IconButton>
-          </div>
-        )}
-        {children && <div className="mt-5">{children}</div>}
-
-        <div className="mt-10">
-          {images.length === 0 ? (
-            <ImageUploadButton onAdd={onAddImages} className="aspect-[16/9] w-full flex-col gap-2 text-[15px] sm:aspect-[21/9]">
-              <ImagePlus className="size-8" />
-              Upload images to visualise it
-              <span className="text-[12px] text-faint">Pick several at once — or drag them here</span>
-            </ImageUploadButton>
-          ) : (
-            <div className="columns-2 gap-3 sm:columns-3 lg:columns-4 [&>*]:mb-3">
-              {images.map((id, i) => (
-                <button key={id} onClick={() => setViewing(i)} className="block w-full break-inside-avoid overflow-hidden rounded-xl">
-                  <StoredImage id={id} className="min-h-24 w-full transition-transform duration-500 hover:scale-[1.03]" />
-                </button>
-              ))}
-              <ImageUploadButton onAdd={onAddImages} className="aspect-square w-full break-inside-avoid">
-                <ImagePlus className="size-5" />
-              </ImageUploadButton>
-            </div>
-          )}
-        </div>
-      </div>
-
-      {viewing !== null && images[viewing] && (
-        <Lightbox
-          images={images}
-          index={viewing}
-          onIndex={setViewing}
-          onClose={() => setViewing(null)}
-          onRemove={(id) => {
-            onRemoveImage(id);
-            setViewing(images.length > 1 ? Math.max(0, viewing - 1) : null);
-          }}
-        />
-      )}
-    </div>,
-    document.body,
+  const go = useCallback(
+    (dir: number) =>
+      count > 0 &&
+      setIndex((i) => (Math.min(i, count - 1) + dir + count) % count),
+    [count],
   );
-}
-
-function Lightbox({
-  images,
-  index,
-  onIndex,
-  onClose,
-  onRemove,
-}: {
-  images: string[];
-  index: number;
-  onIndex: (i: number) => void;
-  onClose: () => void;
-  onRemove: (id: string) => void;
-}) {
-  const touchX = useRef<number | null>(null);
-  const go = useCallback((dir: number) => onIndex((index + dir + images.length) % images.length), [index, images.length, onIndex]);
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       if (e.key === "Escape") onClose();
       if (e.key === "ArrowRight") go(1);
       if (e.key === "ArrowLeft") go(-1);
+      if (e.key === " ") {
+        e.preventDefault();
+        setPlaying((p) => !p);
+      }
     };
     document.addEventListener("keydown", onKey);
-    return () => document.removeEventListener("keydown", onKey);
+    document.body.style.overflow = "hidden";
+    return () => {
+      document.removeEventListener("keydown", onKey);
+      document.body.style.overflow = "";
+    };
   }, [go, onClose]);
 
-  const id = images[index];
-  return (
+  // Moves on by itself; the timer restarts whenever the slide changes.
+  useEffect(() => {
+    if (!playing || dragging || count < 2) return;
+    const id = setTimeout(() => go(1), SLIDE_MS);
+    return () => clearTimeout(id);
+  }, [playing, dragging, count, current, go]);
+
+  const upload = async (files: FileList) => {
+    const ids = await saveImages(files);
+    if (ids.length) {
+      onAddImages(ids);
+      setIndex(count);
+    }
+  };
+
+  return createPortal(
     <div
-      className="animate-fade fixed inset-0 z-[60] flex flex-col bg-black/95"
-      onTouchStart={(e) => (touchX.current = e.touches[0].clientX)}
-      onTouchEnd={(e) => {
-        if (touchX.current === null) return;
-        const dx = e.changedTouches[0].clientX - touchX.current;
-        if (Math.abs(dx) > 50) go(dx < 0 ? 1 : -1);
-        touchX.current = null;
+      role="dialog"
+      aria-modal="true"
+      aria-label={title}
+      className="animate-fade fixed inset-0 z-50 flex h-dvh flex-col overflow-clip bg-black text-fg"
+      onDragOver={(e) => {
+        if (!e.dataTransfer.types.includes("Files")) return;
+        e.preventDefault();
+        setDropping(true);
+      }}
+      onDragLeave={(e) => e.currentTarget === e.target && setDropping(false)}
+      onDrop={(e) => {
+        e.preventDefault();
+        setDropping(false);
+        if (e.dataTransfer.files.length) upload(e.dataTransfer.files);
       }}
     >
-      <div className="flex items-center gap-2 px-3 pt-[max(0.75rem,env(safe-area-inset-top))] pb-2">
-        <IconButton label="Close image" onClick={onClose} className="size-10 text-fg">
-          <X className="size-5" />
-        </IconButton>
-        <span className="flex-1 text-center font-mono text-[12px] text-faint">
-          {index + 1} / {images.length}
-        </span>
-        <IconButton label="Remove image" onClick={() => confirm("Remove this image?") && onRemove(id)} className="size-10 hover:text-danger">
-          <Trash2 className="size-4" />
-        </IconButton>
-      </div>
-      <div className="relative flex min-h-0 flex-1 items-center justify-center p-3 sm:p-8" onClick={onClose}>
-        <div onClick={(e) => e.stopPropagation()} className="flex max-h-full max-w-full">
-          <StoredImage key={id} id={id} className="animate-fade max-h-[calc(100dvh-7rem)] max-w-full rounded-lg object-contain" />
+      {/* The slides. */}
+      {count > 0 && (
+        <div
+          className="absolute inset-0 touch-pan-y overflow-clip"
+          // Swiping with a mouse must not start the browser's own image drag (it would re-add the photo on drop).
+          onDragStart={(e) => e.preventDefault()}
+          onPointerDown={(e) => {
+            width.current = e.currentTarget.clientWidth || 1;
+            start.current = { x: e.clientX, y: e.clientY, t: Date.now() };
+            setDragging(true);
+            e.currentTarget.setPointerCapture(e.pointerId);
+          }}
+          onPointerMove={(e) =>
+            start.current && count > 1 && setDx(e.clientX - start.current.x)
+          }
+          onPointerUp={(e) => {
+            const s = start.current;
+            start.current = null;
+            setDragging(false);
+            setDx(0);
+            if (!s) return;
+            const moved = e.clientX - s.x;
+            const fast = Math.abs(moved) > 30 && Date.now() - s.t < 250;
+            if (Math.abs(moved) > width.current * 0.18 || fast)
+              go(moved < 0 ? 1 : -1);
+            else if (Math.abs(moved) < 6 && Math.abs(e.clientY - s.y) < 6)
+              go(e.clientX < width.current / 3 ? -1 : 1);
+          }}
+          onPointerCancel={() => {
+            start.current = null;
+            setDragging(false);
+            setDx(0);
+          }}
+        >
+          <div
+            className={cn(
+              "flex h-full",
+              !dragging &&
+                "transition-transform duration-500 ease-[var(--ease-out)]",
+            )}
+            style={{
+              transform: `translate3d(calc(${-current * 100}% + ${dx}px), 0, 0)`,
+            }}
+          >
+            {images.map((id, i) => (
+              <div
+                key={id}
+                className="relative h-full w-full shrink-0 overflow-hidden"
+                aria-hidden={i !== current}
+              >
+                {Math.abs(i - current) <= 1 ||
+                (current === 0 && i === count - 1) ||
+                (current === count - 1 && i === 0) ? (
+                  <>
+                    {/* A blurred copy fills the frame behind images that don't share the screen's shape. */}
+                    <StoredImage
+                      id={id}
+                      className="absolute inset-0 size-full scale-110 opacity-40 blur-2xl"
+                    />
+                    <StoredImage
+                      key={i === current ? `${id}-on` : id}
+                      id={id}
+                      className={cn(
+                        "relative size-full object-contain",
+                        i === current && "animate-slow-zoom",
+                      )}
+                    />
+                  </>
+                ) : null}
+              </div>
+            ))}
+          </div>
         </div>
-        {images.length > 1 &&
-          ([-1, 1] as const).map((dir) => (
-            <button
-              key={dir}
-              aria-label={dir < 0 ? "Previous image" : "Next image"}
-              onClick={(e) => {
-                e.stopPropagation();
-                go(dir);
-              }}
-              className={cn(
-                "absolute hidden size-11 items-center justify-center rounded-full bg-white/10 text-white hover:bg-white/20 sm:flex",
-                dir < 0 ? "left-4" : "right-4",
-              )}
+      )}
+
+      {/* Shade so the words and controls stay readable over any photo. */}
+      <div className="pointer-events-none absolute inset-x-0 top-0 h-32 bg-gradient-to-b from-black/80 to-transparent" />
+      <div className="pointer-events-none absolute inset-x-0 bottom-0 h-[55%] bg-gradient-to-t from-black via-black/70 to-transparent" />
+
+      {/* Top bar: progress, close, add. */}
+      <div className="relative z-10 px-3 pt-[max(0.6rem,env(safe-area-inset-top))] sm:px-6">
+        {count > 1 && (
+          <div className="mb-2 flex gap-1 px-1">
+            {images.map((id, i) => (
+              <button
+                key={id}
+                aria-label={`Image ${i + 1}`}
+                onClick={() => setIndex(i)}
+                className="h-4 flex-1 py-1.5"
+              >
+                <span className="block h-[2px] overflow-hidden rounded-full bg-white/25">
+                  <span
+                    key={
+                      i === current
+                        ? `${current}-${playing && !dragging}`
+                        : undefined
+                    }
+                    className={cn(
+                      "block h-full rounded-full bg-white",
+                      i < current
+                        ? "w-full"
+                        : i > current
+                          ? "w-0"
+                          : playing && !dragging
+                            ? "w-0"
+                            : "w-full",
+                    )}
+                    style={
+                      i === current && playing && !dragging
+                        ? {
+                            animation: `fill-bar ${SLIDE_MS}ms linear forwards`,
+                          }
+                        : undefined
+                    }
+                  />
+                </span>
+              </button>
+            ))}
+          </div>
+        )}
+        <div className="flex items-center gap-1">
+          <IconButton
+            label="Close"
+            onClick={onClose}
+            className="size-10 text-white hover:bg-white/10"
+          >
+            <X className="size-5" />
+          </IconButton>
+          <span className="flex-1 text-center font-mono text-[11px] tracking-[0.2em] text-white/60 uppercase">
+            {label}
+            {count > 1 && ` · ${current + 1}/${count}`}
+          </span>
+          {count > 1 && (
+            <IconButton
+              label={playing ? "Pause" : "Play"}
+              onClick={() => setPlaying((p) => !p)}
+              className="size-10 text-white hover:bg-white/10"
             >
-              {dir < 0 ? <ChevronLeft className="size-5" /> : <ChevronRight className="size-5" />}
-            </button>
-          ))}
+              {playing ? (
+                <Pause className="size-4" />
+              ) : (
+                <Play className="size-4" />
+              )}
+            </IconButton>
+          )}
+          <ImageUploadButton
+            plain
+            onAdd={(ids) => {
+              if (!ids.length) return;
+              onAddImages(ids);
+              setIndex(count);
+            }}
+            className="size-10 rounded-full text-white hover:bg-white/10"
+          >
+            <ImagePlus className="size-[18px]" />
+            <span className="sr-only">Add images</span>
+          </ImageUploadButton>
+        </div>
       </div>
-    </div>
+
+      {count > 1 &&
+        ([-1, 1] as const).map((dir) => (
+          <button
+            key={dir}
+            aria-label={dir < 0 ? "Previous image" : "Next image"}
+            onClick={() => go(dir)}
+            className={cn(
+              "absolute top-1/2 z-10 hidden size-11 -translate-y-1/2 items-center justify-center rounded-full bg-white/10 text-white backdrop-blur-md transition-colors hover:bg-white/20 sm:flex",
+              dir < 0 ? "left-5" : "right-5",
+            )}
+          >
+            {dir < 0 ? (
+              <ChevronLeft className="size-5" />
+            ) : (
+              <ChevronRight className="size-5" />
+            )}
+          </button>
+        ))}
+
+      {/* The words. */}
+      <div
+        className={cn(
+          "pointer-events-none relative z-10 mt-auto px-6 pb-[max(2.5rem,env(safe-area-inset-bottom))] sm:px-12 sm:pb-14",
+          count === 0 && "my-auto text-center",
+        )}
+      >
+        <h1 className="mx-auto max-w-4xl text-[32px] leading-[1.1] font-semibold tracking-[-0.025em] text-balance whitespace-pre-wrap text-white sm:text-[52px]">
+          {title}
+        </h1>
+        {children && (
+          <div className="pointer-events-auto mx-auto mt-4 max-w-4xl text-[14px] leading-relaxed text-white/70">
+            {children}
+          </div>
+        )}
+        {count === 0 && (
+          <div className="pointer-events-auto mt-10 flex justify-center">
+            <ImageUploadButton
+              onAdd={onAddImages}
+              className="h-12 border-white/25 px-6 text-white/80 hover:border-crystal hover:text-white"
+            >
+              <ImagePlus className="size-4" /> Add images to see it
+            </ImageUploadButton>
+          </div>
+        )}
+      </div>
+
+      {dropping && (
+        <div className="pointer-events-none absolute inset-3 z-20 flex items-center justify-center rounded-3xl border-2 border-dashed border-white/40 bg-black/70 text-[15px]">
+          Drop images to add them
+        </div>
+      )}
+    </div>,
+    document.body,
   );
 }

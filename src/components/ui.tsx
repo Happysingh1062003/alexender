@@ -11,7 +11,9 @@ import {
   type TextareaHTMLAttributes,
 } from "react";
 import { createPortal } from "react-dom";
+import { create } from "zustand";
 import { saveImages, useImageUrl } from "@/lib/images";
+import { useBackToClose } from "@/lib/useBackToClose";
 import { cn } from "@/lib/utils";
 
 type Variant = "primary" | "ghost" | "outline" | "danger";
@@ -25,11 +27,11 @@ export function Button({
   return (
     <button
       className={cn(
-        "inline-flex shrink-0 items-center justify-center gap-1.5 rounded-lg font-medium transition-colors active:scale-[0.98] disabled:pointer-events-none disabled:opacity-35",
-        size === "sm" ? "h-8 px-3 text-xs" : "h-10 px-4 text-sm",
+        "inline-flex shrink-0 items-center justify-center gap-1.5 rounded-xl font-medium transition-[background-color,color,border-color,transform] duration-150 active:scale-[0.97] disabled:pointer-events-none disabled:opacity-35",
+        size === "sm" ? "h-8 px-3 text-xs" : "h-11 px-5 text-sm",
         variant === "primary" && "bg-fg text-bg hover:bg-white",
         variant === "ghost" && "text-muted hover:bg-surface-2 hover:text-fg",
-        variant === "outline" && "border border-line-strong text-fg hover:bg-surface-2",
+        variant === "outline" && "border border-line-strong text-fg hover:border-faint hover:bg-surface-2",
         variant === "danger" && "text-danger hover:bg-danger/10",
         className,
       )}
@@ -38,17 +40,13 @@ export function Button({
   );
 }
 
-export function IconButton({
-  className,
-  label,
-  ...props
-}: ButtonHTMLAttributes<HTMLButtonElement> & { label: string }) {
+export function IconButton({ className, label, ...props }: ButtonHTMLAttributes<HTMLButtonElement> & { label: string }) {
   return (
     <button
       aria-label={label}
       title={label}
       className={cn(
-        "inline-flex size-8 shrink-0 items-center justify-center rounded-lg text-faint transition-colors hover:bg-surface-2 hover:text-fg active:scale-95 disabled:opacity-25",
+        "inline-flex size-9 shrink-0 items-center justify-center rounded-xl text-faint transition-[background-color,color,transform] duration-150 hover:bg-surface-2 hover:text-fg active:scale-90 disabled:opacity-25",
         className,
       )}
       {...props}
@@ -58,7 +56,7 @@ export function IconButton({
 
 export function Card({ className, children, ...props }: { className?: string; children: ReactNode } & React.HTMLAttributes<HTMLDivElement>) {
   return (
-    <div className={cn("rounded-2xl border border-line bg-surface p-4 sm:p-5", className)} {...props}>
+    <div className={cn("rounded-2xl border border-line bg-surface p-5 sm:p-6", className)} {...props}>
       {children}
     </div>
   );
@@ -66,48 +64,25 @@ export function Card({ className, children, ...props }: { className?: string; ch
 
 export function SectionTitle({ children, action }: { children: ReactNode; action?: ReactNode }) {
   return (
-    <div className="mb-3 flex min-h-8 items-center justify-between gap-2">
-      <h2 className="text-[13px] font-medium text-muted">{children}</h2>
+    <div className="mb-4 flex min-h-8 items-center justify-between gap-2">
+      <h2 className="text-[11px] font-medium tracking-[0.2em] text-faint uppercase">{children}</h2>
       {action}
     </div>
   );
 }
 
+const field =
+  "w-full rounded-xl border border-line bg-surface text-fg outline-none transition-[border-color,background-color,box-shadow] duration-150 placeholder:text-faint focus:border-line-strong focus:bg-surface-2 focus:shadow-[0_0_0_4px_color-mix(in_oklab,var(--crystal)_10%,transparent)]";
+
 export function Input({ className, ...props }: InputHTMLAttributes<HTMLInputElement>) {
-  return (
-    <input
-      className={cn(
-        "h-10 w-full rounded-lg border border-line bg-surface px-3 text-fg outline-none transition-colors placeholder:text-faint focus:border-line-strong focus:bg-surface-2",
-        className,
-      )}
-      {...props}
-    />
-  );
+  return <input className={cn(field, "h-11 px-3.5", className)} {...props} />;
 }
 
 export function Textarea({ className, ...props }: TextareaHTMLAttributes<HTMLTextAreaElement>) {
-  return (
-    <textarea
-      className={cn(
-        "w-full resize-none rounded-lg border border-line bg-surface p-3 text-fg outline-none transition-colors placeholder:text-faint focus:border-line-strong focus:bg-surface-2",
-        className,
-      )}
-      {...props}
-    />
-  );
+  return <textarea className={cn(field, "resize-none p-3.5", className)} {...props} />;
 }
 
-export function Checkbox({
-  checked,
-  onChange,
-  label,
-  size = "md",
-}: {
-  checked: boolean;
-  onChange: () => void;
-  label: string;
-  size?: "sm" | "md";
-}) {
+export function Checkbox({ checked, onChange, label, size = "md" }: { checked: boolean; onChange: () => void; label: string; size?: "sm" | "md" }) {
   return (
     <button
       role="checkbox"
@@ -118,9 +93,10 @@ export function Checkbox({
         onChange();
       }}
       className={cn(
-        "flex shrink-0 items-center justify-center rounded-full border-[1.5px] transition-colors",
+        // A larger invisible hit area keeps small circles easy to tap.
+        "relative flex shrink-0 items-center justify-center rounded-full border-[1.5px] transition-[background-color,border-color] duration-200 before:absolute before:-inset-2.5 before:content-['']",
         size === "sm" ? "size-4" : "size-[22px]",
-        checked ? "border-fg bg-fg text-bg" : "border-faint hover:border-fg",
+        checked ? "animate-ring border-fg bg-fg text-bg" : "border-faint hover:border-fg",
       )}
     >
       {checked && <Check className={cn("animate-check", size === "sm" ? "size-2.5" : "size-3.5")} strokeWidth={3.2} />}
@@ -128,19 +104,8 @@ export function Checkbox({
   );
 }
 
-export function Modal({
-  open,
-  onClose,
-  title,
-  children,
-  wide,
-}: {
-  open: boolean;
-  onClose: () => void;
-  title?: ReactNode;
-  children: ReactNode;
-  wide?: boolean;
-}) {
+export function Modal({ open, onClose, title, children, wide }: { open: boolean; onClose: () => void; title?: ReactNode; children: ReactNode; wide?: boolean }) {
+  useBackToClose(open, onClose);
   useEffect(() => {
     if (!open) return;
     const onKey = (e: KeyboardEvent) => e.key === "Escape" && onClose();
@@ -156,16 +121,17 @@ export function Modal({
   // Portal to <body> so animated (transformed) page containers can't trap the fixed overlay.
   return createPortal(
     <div className="fixed inset-0 z-50 flex items-end justify-center sm:items-center sm:p-6">
-      <div className="animate-fade absolute inset-0 bg-black/70 backdrop-blur-sm" onClick={onClose} />
+      <div className="animate-fade absolute inset-0 bg-black/75 backdrop-blur-md" onClick={onClose} />
       <div
         role="dialog"
         aria-modal="true"
         className={cn(
-          "animate-sheet relative flex max-h-[92dvh] w-full flex-col rounded-t-2xl border border-line-strong bg-surface sm:rounded-2xl",
+          "animate-sheet relative flex max-h-[92dvh] w-full flex-col rounded-t-3xl border border-line-strong bg-surface shadow-[0_-20px_60px_rgba(0,0,0,0.6)] sm:rounded-3xl",
           wide ? "sm:max-w-2xl" : "sm:max-w-md",
         )}
       >
-        <div className="flex items-center justify-between gap-3 px-5 pt-4 pb-2">
+        <div className="mx-auto mt-2 h-1 w-9 rounded-full bg-line-strong sm:hidden" />
+        <div className="flex items-center justify-between gap-3 px-5 pt-3 pb-2 sm:pt-4">
           <div className="min-w-0 flex-1 text-[15px] font-semibold">{title}</div>
           <IconButton label="Close" onClick={onClose}>
             <X className="size-4" />
@@ -178,87 +144,33 @@ export function Modal({
   );
 }
 
-/** Completion ring with a small tick marking the success target. */
-export function ProgressRing({
-  value,
-  target,
-  size = 168,
-  stroke = 8,
-  success,
-  children,
-}: {
-  value: number;
-  target?: number;
-  size?: number;
-  stroke?: number;
-  success?: boolean;
-  children?: ReactNode;
-}) {
-  const r = (size - stroke) / 2;
-  const c = 2 * Math.PI * r;
-  const angle = ((target ?? 0) / 100) * 2 * Math.PI - Math.PI / 2;
-  return (
-    <div className="relative" style={{ width: size, height: size }}>
-      <svg width={size} height={size} className="-rotate-90" aria-hidden>
-        <circle cx={size / 2} cy={size / 2} r={r} fill="none" stroke="var(--surface-3)" strokeWidth={stroke} />
-        <circle
-          cx={size / 2}
-          cy={size / 2}
-          r={r}
-          fill="none"
-          stroke={success ? "var(--success)" : "var(--fg)"}
-          strokeWidth={stroke}
-          strokeLinecap="round"
-          strokeDasharray={c}
-          strokeDashoffset={c - (Math.min(100, value) / 100) * c}
-          style={{ transition: "stroke-dashoffset 0.8s cubic-bezier(0.2, 0.8, 0.2, 1), stroke 0.3s" }}
-        />
-      </svg>
-      {target !== undefined && (
-        <span
-          title={`Success at ${target}%`}
-          className="absolute size-1.5 rounded-full bg-success"
-          style={{
-            left: size / 2 + r * Math.cos(angle) - 3,
-            top: size / 2 + r * Math.sin(angle) - 3,
-          }}
-        />
-      )}
-      <div className="absolute inset-0 flex flex-col items-center justify-center">{children}</div>
-    </div>
-  );
-}
-
-export function ProgressBar({ value, className, tone }: { value: number; className?: string; tone?: "success" }) {
+export function ProgressBar({ value, className, tone }: { value: number; className?: string; tone?: "success" | "crystal" }) {
   return (
     <div className={cn("h-1 w-full overflow-hidden rounded-full bg-surface-3", className)}>
       <div
-        className={cn("h-full rounded-full transition-[width] duration-500", tone === "success" ? "bg-success" : "bg-fg")}
-        style={{ width: `${Math.min(100, value)}%` }}
+        className={cn("h-full rounded-full transition-[width] duration-700 ease-out", tone === "success" ? "bg-success" : tone === "crystal" ? "bg-crystal" : "bg-fg")}
+        style={{ width: `${Math.min(100, Math.max(0, value))}%` }}
       />
     </div>
   );
 }
 
-export function Segmented<T extends string>({
-  value,
-  onChange,
-  options,
-}: {
-  value: T;
-  onChange: (v: T) => void;
-  options: { value: T; label: ReactNode }[];
-}) {
+/** Segmented control with a sliding highlight. */
+export function Segmented<T extends string>({ value, onChange, options }: { value: T; onChange: (v: T) => void; options: { value: T; label: ReactNode }[] }) {
+  const index = Math.max(0, options.findIndex((o) => o.value === value));
   return (
-    <div className="inline-flex rounded-lg border border-line bg-surface p-0.5">
+    <div className="relative inline-grid rounded-xl border border-line bg-surface p-1" style={{ gridTemplateColumns: `repeat(${options.length}, minmax(0, 1fr))` }}>
+      <span
+        aria-hidden
+        className="absolute inset-y-1 left-1 rounded-lg bg-surface-3 transition-transform duration-300"
+        style={{ width: `calc((100% - 8px) / ${options.length})`, transform: `translateX(${index * 100}%)`, transitionTimingFunction: "var(--ease-out)" }}
+      />
       {options.map((o) => (
         <button
           key={o.value}
           onClick={() => onChange(o.value)}
-          className={cn(
-            "rounded-md px-3 py-1.5 text-xs font-medium transition-colors",
-            value === o.value ? "bg-surface-3 text-fg" : "text-muted hover:text-fg",
-          )}
+          aria-pressed={value === o.value}
+          className={cn("relative z-10 rounded-lg px-3.5 py-1.5 text-xs font-medium whitespace-nowrap transition-colors", value === o.value ? "text-fg" : "text-muted hover:text-fg")}
         >
           {o.label}
         </button>
@@ -271,7 +183,7 @@ export function StoredImage({ id, className, alt = "" }: { id?: string; classNam
   const url = useImageUrl(id);
   if (!url) return <div className={cn("animate-pulse bg-surface-2", className)} />;
   // eslint-disable-next-line @next/next/no-img-element
-  return <img src={url} alt={alt} className={cn("object-cover", className)} />;
+  return <img src={url} alt={alt} className={cn("animate-fade object-cover", className)} />;
 }
 
 export function ImageUploadButton({
@@ -308,8 +220,8 @@ export function ImageUploadButton({
           ref.current?.click();
         }}
         className={cn(
-          "flex items-center justify-center gap-2 rounded-xl text-sm transition-colors",
-          !plain && "border border-dashed border-line-strong text-muted hover:border-faint hover:text-fg",
+          "flex items-center justify-center gap-2 rounded-2xl text-sm transition-colors",
+          !plain && "border border-dashed border-line-strong text-muted hover:border-crystal/60 hover:text-fg",
           className,
         )}
       >
@@ -324,17 +236,7 @@ export function ImageUploadButton({
 }
 
 /** Text that turns into an input on click; saves on Enter or blur, cancels on Escape. */
-export function EditableText({
-  value,
-  onSave,
-  className,
-  placeholder,
-}: {
-  value: string;
-  onSave: (value: string) => void;
-  className?: string;
-  placeholder?: string;
-}) {
+export function EditableText({ value, onSave, className, placeholder }: { value: string; onSave: (value: string) => void; className?: string; placeholder?: string }) {
   const [editing, setEditing] = useState(false);
   // Set once Enter or Escape has handled the edit, so the blur that follows doesn't act again.
   const handled = useRef(false);
@@ -360,7 +262,7 @@ export function EditableText({
             setEditing(false);
           }
         }}
-        className={cn("w-full rounded-md bg-surface-2 px-1 -mx-1 outline-none", className)}
+        className={cn("-mx-1 w-full rounded-md bg-surface-2 px-1 outline-none", className)}
       />
     );
   }
@@ -381,16 +283,17 @@ export function EditableText({
 }
 
 /** The small round "+ Add …" button used at the top of sections. */
-export function PillButton({ active, children, ...props }: ButtonHTMLAttributes<HTMLButtonElement> & { active?: boolean }) {
+export function PillButton({ active, children, className, ...props }: ButtonHTMLAttributes<HTMLButtonElement> & { active?: boolean }) {
   return (
     <button
       {...props}
       className={cn(
-        "inline-flex h-8 items-center gap-1.5 rounded-full border px-3.5 text-[13px] font-medium transition-colors",
-        active ? "border-fg text-fg" : "border-line-strong text-muted hover:border-faint hover:text-fg",
+        "group inline-flex h-9 items-center gap-1.5 rounded-full border px-4 text-[13px] font-medium transition-[border-color,color,background-color,transform] duration-200 active:scale-[0.97]",
+        active ? "border-crystal/70 bg-crystal-soft text-fg" : "border-line-strong text-muted hover:border-faint hover:text-fg",
+        className,
       )}
     >
-      <Plus className={cn("size-3.5 transition-transform", active && "rotate-45")} />
+      <Plus className={cn("size-3.5 transition-transform duration-300", active ? "rotate-45 text-crystal" : "group-hover:rotate-90")} />
       {children}
     </button>
   );
@@ -404,35 +307,32 @@ export interface AddAction {
   keepOpen?: boolean;
 }
 
-/** The top of every section: a quiet label, small add buttons, and an input only while adding. */
-export function SectionTop({ label, actions = [], children }: { label?: string; actions?: AddAction[]; children?: ReactNode }) {
+/** The top of a section: small add buttons, and an input only while adding. The section's name is in the navigation. */
+export function SectionTop({ actions = [], children }: { actions?: AddAction[]; children?: ReactNode }) {
   const [open, setOpen] = useState<number | null>(null);
   const [text, setText] = useState("");
   const action = open !== null ? actions[open] : null;
 
   return (
-    <div className="mb-10 flex flex-col items-center gap-4 text-center sm:mb-14">
-      {label && <p className="text-[11px] font-medium tracking-[0.2em] text-faint uppercase">{label}</p>}
-      {(children || actions.length > 0) && (
-        <div className="flex flex-wrap items-center justify-center gap-2">
-          {children}
-          {actions.map((a, i) => (
-            <PillButton
-              key={a.label}
-              active={open === i}
-              onClick={() => {
-                setOpen(open === i ? null : i);
-                setText("");
-              }}
-            >
-              {a.label}
-            </PillButton>
-          ))}
-        </div>
-      )}
+    <div className="mb-10 flex flex-col items-center gap-4 text-center sm:mb-12">
+      <div className="flex flex-wrap items-center justify-center gap-2">
+        {children}
+        {actions.map((a, i) => (
+          <PillButton
+            key={a.label}
+            active={open === i}
+            onClick={() => {
+              setOpen(open === i ? null : i);
+              setText("");
+            }}
+          >
+            {a.label}
+          </PillButton>
+        ))}
+      </div>
       {action && (
         <form
-          className="w-full max-w-md"
+          className="animate-sheet w-full max-w-md"
           onSubmit={(e) => {
             e.preventDefault();
             const value = text.trim();
@@ -449,10 +349,57 @@ export function SectionTop({ label, actions = [], children }: { label?: string; 
             onKeyDown={(e) => e.key === "Escape" && setOpen(null)}
             aria-label={action.label}
             placeholder={action.placeholder}
-            className="h-11 text-center"
+            enterKeyHint="done"
+            className="h-12 text-center"
           />
         </form>
       )}
+    </div>
+  );
+}
+
+// ---------- Toasts: brief confirmation with an optional undo ----------
+
+interface ToastItem {
+  id: number;
+  message: string;
+  action?: { label: string; run: () => void };
+}
+
+const useToasts = create<{ items: ToastItem[] }>(() => ({ items: [] }));
+let nextToast = 1;
+
+export function toast(message: string, action?: ToastItem["action"]) {
+  const id = nextToast++;
+  useToasts.setState((s) => ({ items: [...s.items.slice(-2), { id, message, action }] }));
+  setTimeout(() => useToasts.setState((s) => ({ items: s.items.filter((t) => t.id !== id) })), action ? 5000 : 2600);
+}
+
+export function Toaster() {
+  const items = useToasts((s) => s.items);
+  return (
+    <div aria-live="polite" className="pointer-events-none fixed inset-x-0 bottom-[calc(5.5rem+env(safe-area-inset-bottom))] z-[60] flex flex-col items-center gap-2 px-4 lg:bottom-8">
+      {items.map((t) => (
+        <div
+          key={t.id}
+          className="animate-toast pointer-events-auto flex items-center gap-4 rounded-full border border-line-strong bg-surface-2/95 py-2 pr-2 pl-4 text-[13px] shadow-[0_10px_40px_rgba(0,0,0,0.6)] backdrop-blur-xl"
+        >
+          <span>{t.message}</span>
+          {t.action ? (
+            <button
+              onClick={() => {
+                t.action!.run();
+                useToasts.setState((s) => ({ items: s.items.filter((x) => x.id !== t.id) }));
+              }}
+              className="rounded-full px-3 py-1 font-medium text-crystal hover:bg-crystal-soft"
+            >
+              {t.action.label}
+            </button>
+          ) : (
+            <span className="pr-2" />
+          )}
+        </div>
+      ))}
     </div>
   );
 }

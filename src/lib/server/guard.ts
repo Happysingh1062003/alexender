@@ -7,7 +7,7 @@ import { getStorage, type Storage } from "./storage";
  */
 export function syncStorage(): Storage | Response {
   if (process.env.NODE_ENV === "production" && !sitePassword()) {
-    return Response.json({ code: "no-password", error: "Set ALEXENDER_PASSWORD to turn on sync." }, { status: 403 });
+    return Response.json({ code: "no-password", error: "Set ALEXANDER_PASSWORD to turn on sync." }, { status: 403 });
   }
   const storage = getStorage();
   if (!storage) {

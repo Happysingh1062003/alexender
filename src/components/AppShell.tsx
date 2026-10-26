@@ -14,18 +14,21 @@ import { MoreIcon } from "./icons";
 import { LockScreen } from "./Lock";
 import { Logo } from "./Logo";
 import { Onboarding } from "./Onboarding";
-import { Modal } from "./ui";
+import { Modal, Toaster } from "./ui";
 
 const MOBILE_PRIMARY = ["/", "/calendar", "/mission", "/journal"];
 
-const isActive = (pathname: string, href: string) => (href === "/" ? pathname === "/" : pathname.startsWith(href));
+const isActive = (pathname: string, href: string) =>
+  href === "/" ? pathname === "/" : pathname.startsWith(href);
 
 /**
  * Loads saved data before anything renders. If it can't be read, the app stops at an error
  * screen rather than starting empty — an empty start would overwrite the saved data.
  */
 function useHydrated() {
-  const [status, setStatus] = useState<"loading" | "ready" | "error">("loading");
+  const [status, setStatus] = useState<"loading" | "ready" | "error">(
+    "loading",
+  );
   useEffect(() => {
     let finished = false;
     const unsub = useStore.persist.onFinishHydration(() => {
@@ -34,9 +37,11 @@ function useHydrated() {
       useUI.getState().setUnlocked(readUnlocked());
       setStatus("ready");
     });
-    Promise.resolve(useStore.persist.rehydrate()).then(() => !finished && setStatus("error"));
+    Promise.resolve(useStore.persist.rehydrate()).then(
+      () => !finished && setStatus("error"),
+    );
     const timeout = setTimeout(() => !finished && setStatus("error"), 10_000);
-    // Ask the browser to never evict Alexender's data under storage pressure.
+    // Ask the browser to never evict Alexander's data under storage pressure.
     navigator.storage?.persist?.().catch(() => {});
     return () => {
       unsub();
@@ -98,11 +103,17 @@ export function AppShell({ children }: { children: ReactNode }) {
     return (
       <div className="flex min-h-dvh flex-col items-center justify-center gap-3 px-6 text-center">
         <Logo className="mb-3 size-9" />
-        <p className="text-[15px] font-medium">Couldn&apos;t open your saved data</p>
-        <p className="max-w-xs text-[13px] leading-relaxed text-muted">
-          Nothing was changed. Close any other Alexender tabs, then try again. Private browsing windows can also block storage.
+        <p className="text-[15px] font-medium">
+          Couldn&apos;t open your saved data
         </p>
-        <button onClick={() => location.reload()} className="mt-3 rounded-full border border-line-strong px-4 py-1.5 text-[13px] hover:border-fg">
+        <p className="max-w-xs text-[13px] leading-relaxed text-muted">
+          Nothing was changed. Close any other Alexander tabs, then try again.
+          Private browsing windows can also block storage.
+        </p>
+        <button
+          onClick={() => location.reload()}
+          className="mt-3 rounded-full border border-line-strong px-4 py-1.5 text-[13px] hover:border-fg"
+        >
           Try again
         </button>
       </div>
@@ -133,8 +144,15 @@ export function AppShell({ children }: { children: ReactNode }) {
       <div className="min-h-dvh lg:pl-56">
         <Sidebar />
         <TopBar />
-        <main className="animate-fade mx-auto w-full max-w-5xl px-4 pt-5 pb-28 sm:px-6 lg:px-10 lg:pt-10 lg:pb-16">{children}</main>
+        {/* Keyed by route so every section arrives with the same quiet rise. */}
+        <main
+          key={pathname}
+          className="animate-page mx-auto w-full max-w-5xl px-4 pt-6 pb-28 sm:px-6 lg:px-10 lg:pt-12 lg:pb-16"
+        >
+          {children}
+        </main>
         <BottomNav />
+        <Toaster />
       </div>
     </LucideProvider>
   );
@@ -146,7 +164,9 @@ function Sidebar() {
     <aside className="fixed inset-y-0 left-0 z-30 hidden w-56 flex-col border-r border-line bg-bg px-3 py-5 lg:flex">
       <Link href="/" className="mb-7 flex items-center gap-2.5 px-2.5">
         <Logo className="size-6" />
-        <span className="text-[15px] font-semibold tracking-tight">Alexender</span>
+        <span className="text-[16px] font-semibold tracking-tight">
+          Alexander
+        </span>
       </Link>
       <nav className="flex flex-1 flex-col gap-px">
         {NAV.map(({ href, label, icon: Icon }) => {
@@ -155,9 +175,11 @@ function Sidebar() {
             <Link
               key={href}
               href={href}
+              aria-current={active ? "page" : undefined}
               className={cn(
-                "flex h-9 items-center gap-3 rounded-lg px-2.5 text-[13.5px] transition-colors",
-                active ? "bg-surface-2 font-medium text-fg" : "text-muted hover:bg-surface hover:text-fg",
+                // Same weight active or not, so nothing shifts; only the tone changes, quickly.
+                "flex h-9 items-center gap-3 rounded-lg px-2.5 text-[13.5px] transition-colors duration-150 active:bg-surface-2",
+                active ? "bg-surface-2 text-fg" : "text-muted hover:bg-surface hover:text-fg",
               )}
             >
               <Icon className="size-[18px]" />
@@ -175,7 +197,10 @@ function SidebarLock() {
   const hasLock = useStore((s) => !!s.settings.lock);
   if (!hasLock) return null;
   return (
-    <button onClick={lockNow} className="flex h-9 items-center gap-3 rounded-lg px-2.5 text-[13.5px] text-muted transition-colors hover:bg-surface hover:text-fg">
+    <button
+      onClick={lockNow}
+      className="flex h-9 items-center gap-3 rounded-lg px-2.5 text-[13.5px] text-muted transition-colors hover:bg-surface hover:text-fg"
+    >
       <LockKeyhole className="size-[18px]" /> Lock
     </button>
   );
@@ -187,32 +212,69 @@ function TopBar() {
   const threshold = useStore((s) => s.settings.winThreshold);
   const pct = log?.pct ?? 0;
   const won = log && log.total > 0 && pct >= threshold;
-  const date = fromKey(today).toLocaleDateString(undefined, { weekday: "short", day: "numeric", month: "short" });
+  const date = fromKey(today).toLocaleDateString(undefined, {
+    weekday: "short",
+    day: "numeric",
+    month: "short",
+  });
   const hasLock = useStore((s) => !!s.settings.lock);
   const syncStatus = useSync((s) => s.status);
+  const pathname = usePathname();
+  const section = NAV.find((n) => isActive(pathname, n.href));
+  // Today already shows its own progress large; elsewhere the bar is a quiet reminder.
+  const showProgress = pathname !== "/";
 
   return (
-    <header className="sticky top-0 z-20 border-b border-line bg-bg/85 backdrop-blur-xl">
+    <header className="sticky top-0 z-20 border-b border-line/70 bg-bg/80 backdrop-blur-xl">
       <div className="mx-auto flex h-13 max-w-5xl items-center gap-3 px-4 sm:px-6 lg:px-10">
-        <Link href="/" className="flex items-center gap-2 lg:hidden">
-          <Logo className="size-5" />
-          <span className="text-[15px] font-semibold tracking-tight">Alexender</span>
-        </Link>
+        <p className="text-[15px] font-medium lg:hidden">
+          {pathname === "/" ? date : (section?.label ?? "Alexander")}
+        </p>
         <p className="hidden text-[13px] text-muted lg:block">{date}</p>
         <div className="flex-1" />
         {(syncStatus === "offline" || syncStatus === "error") && (
-          <Link href="/settings" title={syncStatus === "offline" ? "Offline — changes will sync when you're back online" : "Sync problem — see Settings"}>
+          <Link
+            href="/settings"
+            title={
+              syncStatus === "offline"
+                ? "Offline — changes will sync when you're back online"
+                : "Sync problem — see Settings"
+            }
+          >
             <CloudOff className="size-4 text-faint" />
           </Link>
         )}
-        <div title="Completed today" className="flex items-center gap-2.5 text-[13px]">
-          <div className="h-1 w-16 overflow-hidden rounded-full bg-surface-3">
-            <div className={cn("h-full rounded-full", won ? "bg-success" : "bg-fg")} style={{ width: `${pct}%` }} />
-          </div>
-          <span className={cn("font-mono tabular-nums", won ? "text-success" : "text-fg")}>{pct}%</span>
-        </div>
+        {showProgress && (
+          <Link
+            href="/"
+            title="Completed today"
+            className="animate-fade flex items-center gap-2.5 text-[13px]"
+          >
+            <div className="h-1 w-16 overflow-hidden rounded-full bg-surface-3">
+              <div
+                className={cn(
+                  "h-full rounded-full transition-[width] duration-700 ease-[var(--ease-out)]",
+                  won ? "bg-crystal" : "bg-fg",
+                )}
+                style={{ width: `${pct}%` }}
+              />
+            </div>
+            <span
+              className={cn(
+                "font-mono tabular-nums",
+                won ? "text-crystal" : "text-fg",
+              )}
+            >
+              {pct}%
+            </span>
+          </Link>
+        )}
         {hasLock && (
-          <button aria-label="Lock" onClick={lockNow} className="-mr-1.5 flex size-8 items-center justify-center rounded-lg text-muted hover:bg-surface-2 hover:text-fg lg:hidden">
+          <button
+            aria-label="Lock"
+            onClick={lockNow}
+            className="-mr-1.5 flex size-8 items-center justify-center rounded-lg text-muted hover:bg-surface-2 hover:text-fg lg:hidden"
+          >
             <LockKeyhole className="size-[17px]" />
           </button>
         )}
@@ -223,7 +285,11 @@ function TopBar() {
 
 function BottomNav() {
   const pathname = usePathname();
-  const [more, setMore] = useState(false);
+  // The sheet belongs to the page it was opened on: arriving at another page closes it. Closing it
+  // only after the navigation keeps its Back-gesture entry from undoing that navigation.
+  const [moreAt, setMoreAt] = useState<string | null>(null);
+  const more = moreAt === pathname;
+  const setMore = (open: boolean) => setMoreAt(open ? pathname : null);
   const primary = NAV.filter((n) => MOBILE_PRIMARY.includes(n.href));
   const rest = NAV.filter((n) => !MOBILE_PRIMARY.includes(n.href));
   const moreActive = rest.some((n) => isActive(pathname, n.href));
@@ -238,7 +304,11 @@ function BottomNav() {
               <Link
                 key={href}
                 href={href}
-                className={cn("flex flex-col items-center justify-center gap-1 text-[10px] font-medium", active ? "text-fg" : "text-faint")}
+                aria-current={active ? "page" : undefined}
+                className={cn(
+                  "flex flex-col items-center justify-center gap-1 text-[10px] font-medium transition-[color,transform] duration-150 active:scale-95",
+                  active ? "text-fg" : "text-faint",
+                )}
               >
                 <Icon className="size-[22px]" />
                 {label}
@@ -247,7 +317,10 @@ function BottomNav() {
           })}
           <button
             onClick={() => setMore(true)}
-            className={cn("flex flex-col items-center justify-center gap-1 text-[10px] font-medium", moreActive ? "text-fg" : "text-faint")}
+            className={cn(
+              "flex flex-col items-center justify-center gap-1 text-[10px] font-medium",
+              moreActive ? "text-fg" : "text-faint",
+            )}
           >
             <MoreIcon className="size-[22px]" />
             All
@@ -260,10 +333,12 @@ function BottomNav() {
             <Link
               key={href}
               href={href}
-              onClick={() => setMore(false)}
+              onClick={() => isActive(pathname, href) && setMore(false)}
               className={cn(
                 "flex aspect-square flex-col items-center justify-center gap-2.5 rounded-2xl border text-[13px] font-medium transition-colors",
-                isActive(pathname, href) ? "border-line-strong bg-surface-2 text-fg" : "border-line text-muted hover:bg-surface-2 hover:text-fg",
+                isActive(pathname, href)
+                  ? "border-line-strong bg-surface-2 text-fg"
+                  : "border-line text-muted hover:bg-surface-2 hover:text-fg",
               )}
             >
               <Icon className="size-6" />

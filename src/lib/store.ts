@@ -5,7 +5,7 @@ import { create } from "zustand";
 import { createJSONStorage, persist, type StateStorage } from "zustand/middleware";
 import { todayKey } from "./date";
 import { deleteImages } from "./images";
-import type { Book, DayLog, Goal, JournalEntry, Mission, Priority, Settings, Task, Video } from "./types";
+import type { Book, BucketItem, DayLog, Goal, JournalEntry, Mission, Priority, Settings, Task, Video } from "./types";
 import { pct, uid } from "./utils";
 
 const idbStorage: StateStorage = {
@@ -19,7 +19,10 @@ const idbStorage: StateStorage = {
 };
 
 /** Collections whose records sync individually. Tombstone keys are `${kind}:${id}`. */
-export type Kind = "tasks" | "missions" | "goals" | "videos" | "books" | "journal";
+export type Kind = "tasks" | "missions" | "goals" | "videos" | "books" | "bucket" | "journal";
+
+/** Collections that can be reordered by dragging. */
+export type OrderedKind = "tasks" | "missions" | "goals" | "videos" | "books" | "bucket";
 
 export interface Data {
   tasks: Task[];
@@ -28,13 +31,14 @@ export interface Data {
   goals: Goal[];
   videos: Video[];
   books: Book[];
+  bucket: BucketItem[];
   journal: Record<string, JournalEntry>;
   settings: Settings;
   /** When each record was deleted, so a delete on one device removes it everywhere. */
   deleted: Record<string, number>;
 }
 
-export const DATA_KEYS = ["tasks", "days", "missions", "goals", "videos", "books", "journal", "settings", "deleted"] as const;
+export const DATA_KEYS = ["tasks", "days", "missions", "goals", "videos", "books", "bucket", "journal", "settings", "deleted"] as const;
 
 const defaultSettings: Settings = {
   name: "",
@@ -50,6 +54,7 @@ const initialData: Data = {
   goals: [],
   videos: [],
   books: [],
+  bucket: [],
   journal: {},
   settings: defaultSettings,
   deleted: {},
@@ -74,17 +79,25 @@ interface Actions {
 
   addVideo: (v: { url: string; youtubeId: string; title: string }) => string;
   updateVideo: (id: string, patch: Partial<Video>) => void;
-  moveVideo: (id: string, dir: -1 | 1) => void;
   completeVideo: (id: string) => void;
   reopenVideo: (id: string) => void;
   deleteVideo: (id: string) => void;
 
   addBook: (b: { title: string; author: string; totalPages?: number }) => string;
   updateBook: (id: string, patch: Partial<Book>) => void;
-  moveBook: (id: string, dir: -1 | 1) => void;
-  completeBook: (id: string) => void;
+  completeBook: (id: string, action?: string) => void;
   reopenBook: (id: string) => void;
   deleteBook: (id: string) => void;
+
+  addBucket: (title: string) => string;
+  updateBucket: (id: string, patch: Partial<BucketItem>) => void;
+  toggleBucket: (id: string) => void;
+  deleteBucket: (id: string) => void;
+
+  /** Save a new manual order: `ids` in their new sequence. */
+  reorder: (kind: OrderedKind, ids: string[]) => void;
+  /** Put a just-deleted record back (undo). */
+  restore: (kind: OrderedKind, record: { id: string }) => void;
 
   setJournal: (date: string, text: string) => void;
 
@@ -141,25 +154,12 @@ export function normalize(p: Partial<Data>): Data {
     goals: p.goals ?? [],
     videos: p.videos ?? [],
     books: p.books ?? [],
+    bucket: p.bucket ?? [],
     journal: p.journal ?? {},
     settings,
     deleted: p.deleted ?? {},
   };
 }
-
-/** Swap a queue item with its neighbour; both are stamped so the new order syncs. */
-const reorder = <T extends { id: string; order: number; done: boolean; updatedAt?: number }>(list: T[], id: string, dir: -1 | 1) => {
-  const queue = list.filter((x) => !x.done).sort((a, b) => a.order - b.order);
-  const i = queue.findIndex((x) => x.id === id);
-  const j = i + dir;
-  if (i < 0 || j < 0 || j >= queue.length) return list;
-  const a = queue[i];
-  const b = queue[j];
-  const now = Date.now();
-  return list.map((x) =>
-    x.id === a.id ? { ...x, order: b.order, updatedAt: now } : x.id === b.id ? { ...x, order: a.order, updatedAt: now } : x,
-  );
-};
 
 const nextOrder = (list: { order: number }[]) => list.reduce((m, x) => Math.max(m, x.order), 0) + 1;
 
@@ -171,7 +171,8 @@ export const useStore = create<Store>()(
       addTask: ({ title, date, priority = "med", time }) =>
         setState((s) => {
           const now = Date.now();
-          const tasks = [...s.tasks, { id: uid(), title, date, priority, time, done: false, createdAt: now, updatedAt: now }];
+          const order = nextOrder(s.tasks.filter((t) => t.date === date).map((t) => ({ order: t.order ?? 0 })));
+          const tasks = [...s.tasks, { id: uid(), title, date, priority, time, done: false, createdAt: now, updatedAt: now, order }];
           return { tasks, days: withScore(s.days, tasks, date) };
         }),
 
@@ -242,7 +243,9 @@ export const useStore = create<Store>()(
       addMission: (text) => {
         const id = uid();
         const now = Date.now();
-        setState((s) => ({ missions: [...s.missions, { id, text, images: [], createdAt: now, updatedAt: now }] }));
+        setState((s) => ({
+          missions: [...s.missions, { id, text, images: [], createdAt: now, updatedAt: now, order: nextOrder(s.missions.map((m) => ({ order: m.order ?? 0 }))) }],
+        }));
         return id;
       },
       updateMission: (id, patch) => setState((s) => ({ missions: patchById(s.missions, id, patch) })),
@@ -255,7 +258,12 @@ export const useStore = create<Store>()(
       addGoal: ({ title, why = "", deadline }) => {
         const id = uid();
         const now = Date.now();
-        setState((s) => ({ goals: [...s.goals, { id, title, why, deadline, images: [], achieved: false, createdAt: now, updatedAt: now }] }));
+        setState((s) => ({
+          goals: [
+            ...s.goals,
+            { id, title, why, deadline, images: [], achieved: false, createdAt: now, updatedAt: now, order: nextOrder(s.goals.map((g) => ({ order: g.order ?? 0 }))) },
+          ],
+        }));
         return id;
       },
       updateGoal: (id, patch) => setState((s) => ({ goals: patchById(s.goals, id, patch) })),
@@ -272,7 +280,6 @@ export const useStore = create<Store>()(
         return id;
       },
       updateVideo: (id, patch) => setState((s) => ({ videos: patchById(s.videos, id, patch) })),
-      moveVideo: (id, dir) => setState((s) => ({ videos: reorder(s.videos, id, dir) })),
       completeVideo: (id) => setState((s) => ({ videos: patchById(s.videos, id, { done: true, completedAt: Date.now() }) })),
       reopenVideo: (id) =>
         setState((s) => ({ videos: patchById(s.videos, id, { done: false, completedAt: undefined, order: nextOrder(s.videos) }) })),
@@ -285,15 +292,66 @@ export const useStore = create<Store>()(
         return id;
       },
       updateBook: (id, patch) => setState((s) => ({ books: patchById(s.books, id, patch) })),
-      moveBook: (id, dir) => setState((s) => ({ books: reorder(s.books, id, dir) })),
-      completeBook: (id) =>
+      completeBook: (id, action) =>
         setState((s) => {
           const book = s.books.find((b) => b.id === id);
-          return { books: patchById(s.books, id, { done: true, completedAt: Date.now(), currentPage: book?.totalPages ?? book?.currentPage }) };
+          return {
+            books: patchById(s.books, id, {
+              done: true,
+              completedAt: Date.now(),
+              currentPage: book?.totalPages ?? book?.currentPage,
+              ...(action?.trim() && { action: action.trim() }),
+            }),
+          };
         }),
       reopenBook: (id) =>
         setState((s) => ({ books: patchById(s.books, id, { done: false, completedAt: undefined, order: nextOrder(s.books) }) })),
-      deleteBook: (id) => setState((s) => ({ books: s.books.filter((b) => b.id !== id), deleted: tombstone(s.deleted, "books", id) })),
+      deleteBook: (id) => {
+        const book = getState().books.find((b) => b.id === id);
+        if (book?.coverId) deleteImages([book.coverId]);
+        setState((s) => ({ books: s.books.filter((b) => b.id !== id), deleted: tombstone(s.deleted, "books", id) }));
+      },
+
+      addBucket: (title) => {
+        const id = uid();
+        const now = Date.now();
+        setState((s) => ({ bucket: [...s.bucket, { id, title, done: false, createdAt: now, updatedAt: now, order: nextOrder(s.bucket) }] }));
+        return id;
+      },
+      updateBucket: (id, patch) => setState((s) => ({ bucket: patchById(s.bucket, id, patch) })),
+      toggleBucket: (id) =>
+        setState((s) => {
+          const item = s.bucket.find((b) => b.id === id);
+          return item ? { bucket: patchById(s.bucket, id, { done: !item.done, doneAt: item.done ? undefined : Date.now() }) } : s;
+        }),
+      deleteBucket: (id) => {
+        const item = getState().bucket.find((b) => b.id === id);
+        if (item?.imageId) deleteImages([item.imageId]);
+        setState((s) => ({ bucket: s.bucket.filter((b) => b.id !== id), deleted: tombstone(s.deleted, "bucket", id) }));
+      },
+
+      restore: (kind, record) =>
+        setState((s) => {
+          const deleted = { ...s.deleted };
+          delete deleted[`${kind}:${record.id}`];
+          const list = (s[kind] as { id: string }[]).filter((x) => x.id !== record.id);
+          const next = [...list, { ...record, updatedAt: Date.now() }];
+          const patch = { [kind]: next, deleted } as Partial<Data>;
+          if (kind === "tasks") patch.days = withScore(s.days, next as Task[], (record as Task).date);
+          return patch;
+        }),
+
+      reorder: (kind, ids) =>
+        setState((s) => {
+          const position = new Map(ids.map((id, i) => [id, i + 1]));
+          const now = Date.now();
+          const list = s[kind] as { id: string; order?: number }[];
+          const next = list.map((x) => {
+            const order = position.get(x.id);
+            return order !== undefined && order !== x.order ? { ...x, order, updatedAt: now } : x;
+          });
+          return { [kind]: next } as Partial<Data>;
+        }),
 
       setJournal: (date, text) =>
         setState((s) => {
@@ -326,12 +384,21 @@ export const useStore = create<Store>()(
 
 /** The persisted/synced part of the store. */
 export function pickData(s: Data): Data {
-  const { tasks, days, missions, goals, videos, books, journal, settings, deleted } = s;
-  return { tasks, days, missions, goals, videos, books, journal, settings, deleted };
+  const { tasks, days, missions, goals, videos, books, bucket, journal, settings, deleted } = s;
+  return { tasks, days, missions, goals, videos, books, bucket, journal, settings, deleted };
 }
 
 /** Every image id referenced anywhere — used for backups and photo sync. */
-export const allImageIds = (s: Data) => [...s.missions.flatMap((m) => m.images), ...s.goals.flatMap((g) => g.images)];
+export const allImageIds = (s: Data) => [
+  ...s.missions.flatMap((m) => m.images),
+  ...s.goals.flatMap((g) => g.images),
+  ...s.books.flatMap((b) => (b.coverId ? [b.coverId] : [])),
+  ...s.bucket.flatMap((b) => (b.imageId ? [b.imageId] : [])),
+];
+
+/** Manual order, falling back to creation time for records saved before ordering existed. */
+export const byOrder = (a: { order?: number; createdAt: number }, b: { order?: number; createdAt: number }) =>
+  (a.order ?? a.createdAt) - (b.order ?? b.createdAt) || a.createdAt - b.createdAt;
 
 /** Ticking clock shared by the whole app (not persisted). */
 export const useClock = create<{ now: number; today: string; tick: () => void }>((setState) => ({

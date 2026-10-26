@@ -4,7 +4,7 @@ import { ArrowRight } from "lucide-react";
 import { useState } from "react";
 import { useStore } from "@/lib/store";
 import { PasscodeSetup } from "./Lock";
-import { Logo } from "./Logo";
+import { Statue } from "./brand";
 import { Button, Input, Textarea } from "./ui";
 
 export function Onboarding() {
@@ -20,9 +20,9 @@ export function Onboarding() {
   };
 
   return (
-    <div className="flex min-h-dvh items-center justify-center px-6">
-      <div key={step} className="animate-sheet w-full max-w-sm">
-        <Logo className="mb-8 size-11" />
+    <div className="relative flex min-h-dvh items-center justify-center overflow-hidden px-6">
+      <div key={step} className="animate-sheet relative w-full max-w-sm">
+        <Statue priority className="mb-8 h-28 w-auto" />
         <p className="mb-2 font-mono text-[11px] text-faint">{step + 1} / 3</p>
 
         {step === 0 && (
@@ -32,8 +32,8 @@ export function Onboarding() {
               if (name.trim()) setStep(1);
             }}
           >
-            <p className="text-sm text-muted">I am Alexender, your personal command center.</p>
-            <h1 className="mt-2 mb-8 text-3xl leading-tight font-semibold tracking-tight">What should I call you?</h1>
+            <p className="text-sm text-muted">I am Alexander, your personal command center.</p>
+            <h1 className="mt-2 mb-8 text-[28px] leading-tight font-semibold tracking-tight">What should I call you?</h1>
             <Input autoFocus value={name} onChange={(e) => setName(e.target.value)} placeholder="Your name" className="h-11" />
             <Button className="mt-4 w-full" disabled={!name.trim()}>
               Continue <ArrowRight className="size-4" />
@@ -49,7 +49,7 @@ export function Onboarding() {
             }}
           >
             <p className="text-sm text-muted">Welcome, {name.trim()}.</p>
-            <h1 className="mt-2 mb-8 text-3xl leading-tight font-semibold tracking-tight">What is your mission?</h1>
+            <h1 className="mt-2 mb-8 text-[28px] leading-tight font-semibold tracking-tight">What is your mission?</h1>
             <Textarea
               autoFocus
               rows={4}
@@ -66,9 +66,9 @@ export function Onboarding() {
         {step === 2 && (
           <div>
             <p className="text-sm text-muted">Only you get in.</p>
-            <h1 className="mt-2 mb-3 text-3xl leading-tight font-semibold tracking-tight">Set a passcode</h1>
+            <h1 className="mt-2 mb-3 text-[28px] leading-tight font-semibold tracking-tight">Set a passcode</h1>
             <p className="mb-6 text-[13px] leading-relaxed text-muted">
-              Alexender will ask for it every time it opens, and again after 5 minutes in the background.
+              Alexander will ask for it every time it opens, and again after 5 minutes in the background.
             </p>
             <PasscodeSetup onDone={finish} />
             <button onClick={finish} className="mt-4 w-full text-center text-[12px] text-faint hover:text-muted">

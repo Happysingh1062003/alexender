@@ -1,8 +1,8 @@
-# Alexender
+# Alexander
 
 A private, calm command center for one person. Plan the day, see your progress, keep your missions in sight, and remember how much time you have.
 
-Next.js 16 · React 19 · Tailwind CSS 4 · Zustand. Black, minimal, mobile-first. Data is saved automatically in the browser (IndexedDB). No accounts, no AI APIs.
+Next.js 16 · React 19 · Tailwind CSS 4 · Zustand. Black, minimal, mobile-first. Data is saved on each device and synced across your devices through your own server. No AI APIs.
 
 ## Run
 
@@ -17,16 +17,37 @@ Open http://localhost:3000. On a phone, use "Add to Home Screen".
 
 Every section has the same shape: a small label and "+ Add …" button at the top, the content centered below.
 
-- **Today** — today's tasks, completion % and time spent. A Today / Tomorrow switch at the top lets you plan tomorrow without showing both. Tick a task and its time is added automatically (▶ times it exactly; click the time to correct it). 70% or more is a successful day.
-- **Calendar** — month grid with each day's %, the selected day's tasks, and three numbers for the last 30 days.
-- **Mission** — only your missions and goals, large and centered. Tap one to open its images and upload more. Add or delete them in Settings.
-- **Journal** — "Write today" at the top, past entries below by date. Saves as you type.
+- **Today** — a small marble head of Alexander beside today's completion %, then your tasks. A Today / Tomorrow switch lets you plan tomorrow without showing both. Tick a task and its time is added automatically (▶ times it exactly; click the time to correct it). 70% or more is a successful day. Any task can carry a note (the note button beside it; tap the note to edit). Delete and "move to next day" can be undone.
+- **Calendar** — analytics only: average, days won, streak and focus time for 7 / 30 / 90 days; a completion line you can scrub with a finger or the mouse; the month grid; your weekly rhythm; focus time per day; and the last six months as a heatmap. Tap any day in a chart to jump to it.
+- **Mission** — only your missions and goals, large and centered. Tap one to see its images one at a time: swipe, tap the edges or use the arrow keys; it moves on by itself until you touch it. Add, edit, reorder and remove images in Settings.
+- **Journal** — "Write today" opens a full-screen page that always fits above the phone keyboard, with a back button (the phone's back gesture works too). Saves as you type.
 - **Videos** — paste a YouTube link; title, thumbnail, length, views and date fill in. Play, mark watched, see time left.
-- **Books** — reading list with page progress on the current book, and finished books. Covers are found automatically.
-- **Life** — days left from your birth date and your country's average life expectancy, with your life in weeks. Today shows a one-line reminder.
-- **Settings** — name, success threshold, missions & goals, passcode, backup export/import.
+- **Books** — reading list with page progress. Covers are found automatically, or tap a cover to use your own photo. Finishing a book asks what action you will take; it is shown under the book.
+- **Bucket list** — the life outside work: places, adventures, moments. Add a photo and a note, mark them lived.
+- **Life** — days, weeks, months or years left; rings for what is left of today, this week, month, year and your life; a timeline with Alexander's age on it; and a grid that follows the chosen unit (this year day by day, or your whole life in weeks, months or years).
+- **Settings** — name, success threshold, missions & goals (with their images), passcode, sync, backup export/import.
+
+Every list — tasks, missions, goals, videos, books, bucket list — can be reordered: drag the ⋮⋮ handle (press and hold on a phone), or focus it and use Enter + arrow keys.
+
+The statue is the marble head of Alexander in the British Museum, cut out from its background into `public/alexander.webp` (51 KB, served locally). Internal storage names still say `alexender`, so existing data and backups keep working.
+
+## Use it on every device (sync)
+
+Every device keeps a local copy (instant, works offline) and syncs in the background through your own server. Edits from different devices are merged record by record, so nothing is overwritten. Photos sync too.
+
+- **On this computer (`npm run dev`)** sync saves to a `.data` folder next to the app (not committed to git).
+- **Online** it saves to a free Neon Postgres database. Setup, about 10 minutes:
+
+1. Push this project to GitHub (already set up: `git push`).
+2. Go to [vercel.com](https://vercel.com), sign in with GitHub, click **Add New → Project**, and import the `alexender` repository. Don't deploy yet.
+3. In **Environment Variables**, add `ALEXANDER_PASSWORD` with a long password only you know. Then click **Deploy**.
+4. In the project, open **Storage → Create Database → Neon** (free), and connect it to the project. This adds `DATABASE_URL` automatically.
+5. Open **Deployments → ⋯ → Redeploy** so the new database setting takes effect.
+6. Open your site on your computer, sign in with your website password, and your data uploads. Then open the same address on your phone, sign in, and use **Add to Home Screen**.
+
+Sync is refused online unless `ALEXANDER_PASSWORD` is set, so your data is never exposed without a password. Settings → *Sync across devices* shows the current status.
 
 ## Privacy
 
 - **Passcode** (Settings → Privacy, or during setup): asked every time the app opens and after 5 minutes in the background. Stored only as a salted hash.
-- **Website password**: when you host Alexender online, set `ALEXENDER_PASSWORD` in your host's environment variables (or `.env.local`). Every page then requires it, checked on the server before anything loads.
+- **Website password**: when you host Alexander online, set `ALEXANDER_PASSWORD` in your host's environment variables (or `.env.local`). The old spelling `ALEXENDER_PASSWORD` still works. Every page then requires it, checked on the server before anything loads.

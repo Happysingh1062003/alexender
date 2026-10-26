@@ -2,7 +2,7 @@
 
 import { ArrowRight } from "lucide-react";
 import { useState } from "react";
-import { Logo } from "@/components/Logo";
+import { Statue } from "@/components/brand";
 import { Button, Input } from "@/components/ui";
 
 export default function LoginPage() {
@@ -11,9 +11,9 @@ export default function LoginPage() {
   const [busy, setBusy] = useState(false);
 
   return (
-    <div className="flex min-h-dvh items-center justify-center px-6">
+    <div className="relative flex min-h-dvh items-center justify-center overflow-hidden px-6">
       <form
-        className="animate-sheet w-full max-w-xs"
+        className="animate-sheet relative w-full max-w-xs text-center"
         onSubmit={async (e) => {
           e.preventDefault();
           setBusy(true);
@@ -32,8 +32,8 @@ export default function LoginPage() {
           setPassword("");
         }}
       >
-        <Logo className="mb-6 size-10" />
-        <h1 className="text-2xl font-semibold tracking-tight">Alexender</h1>
+        <Statue priority className="mx-auto mb-6 h-36 w-auto" />
+        <h1 className="text-[28px] leading-none font-semibold tracking-tight">Alexander</h1>
         <p className="mt-1 mb-8 text-[13px] text-muted">Private. Enter your password to continue.</p>
         <Input
           autoFocus
@@ -42,7 +42,7 @@ export default function LoginPage() {
           value={password}
           onChange={(e) => setPassword(e.target.value)}
           placeholder="Password"
-          className="h-11"
+          className="h-11 text-center"
         />
         {error && <p className="mt-2 text-[12px] text-danger">Wrong password.</p>}
         <Button className="mt-4 w-full" disabled={!password || busy}>

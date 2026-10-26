@@ -1,10 +1,11 @@
 "use client";
 
-import { Cloud, Download, HardDrive, LockKeyhole, RefreshCw, Trash2, Upload, X } from "lucide-react";
+import { Cloud, Download, HardDrive, LockKeyhole, RefreshCw, Trash2, Upload } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { lockNow } from "@/components/AppShell";
 import { PasscodeSetup } from "@/components/Lock";
-import { Button, Card, IconButton, Input, SectionTitle, SectionTop } from "@/components/ui";
+import { MissionsAndGoals } from "@/components/MissionSettings";
+import { Button, Card, Input, SectionTitle } from "@/components/ui";
 import { exportBackup, importBackup } from "@/lib/backup";
 import { clearImages } from "@/lib/images";
 import { verifyPasscode } from "@/lib/lock";
@@ -27,13 +28,12 @@ export default function SettingsPage() {
 
   return (
     <div className="mx-auto max-w-2xl space-y-4">
-      <SectionTop label="Settings" />
 
       <Card>
         <SectionTitle>Profile</SectionTitle>
         <label className="block">
           <span className="mb-1.5 block text-[12px] text-faint">Your name</span>
-          <Input defaultValue={settings.name} onBlur={(e) => e.target.value.trim() && updateSettings({ name: e.target.value.trim() })} />
+          <Input defaultValue={settings.name} onChange={(e) => e.target.value.trim() && updateSettings({ name: e.target.value.trim() })} />
         </label>
         <label className="mt-5 block">
           <span className="mb-2 flex justify-between text-[12px] text-faint">
@@ -47,7 +47,7 @@ export default function SettingsPage() {
             step={5}
             value={settings.winThreshold}
             onChange={(e) => updateSettings({ winThreshold: Number(e.target.value) })}
-            className="w-full accent-white"
+            className="w-full accent-[var(--crystal)]"
           />
         </label>
         <p className="mt-3 text-[12px] text-faint">Birth date and country for the Life section are set on the Life page.</p>
@@ -57,77 +57,6 @@ export default function SettingsPage() {
       <SyncCard />
       <Privacy />
       <YourData />
-    </div>
-  );
-}
-
-/** The only place missions and goals are added, so the Mission page can stay pure text. */
-function MissionsAndGoals() {
-  const missions = useStore((s) => s.missions);
-  const goals = useStore((s) => s.goals);
-  const { addMission, deleteMission, addGoal, deleteGoal } = useStore.getState();
-
-  return (
-    <Card>
-      <SectionTitle>Missions & goals</SectionTitle>
-      <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
-        <AddList
-          label="Missions"
-          placeholder="Add a mission"
-          items={missions.map((m) => ({ id: m.id, text: m.text }))}
-          onAdd={addMission}
-          onRemove={(id) => confirm("Delete this mission and its images?") && deleteMission(id)}
-        />
-        <AddList
-          label="Goals"
-          placeholder="Add a goal"
-          items={goals.map((g) => ({ id: g.id, text: g.title, done: g.achieved }))}
-          onAdd={(title) => addGoal({ title })}
-          onRemove={(id) => confirm("Delete this goal and its images?") && deleteGoal(id)}
-        />
-      </div>
-      <p className="mt-4 text-[12px] text-faint">Tap any of them on the Mission page to add images or edit the wording.</p>
-    </Card>
-  );
-}
-
-function AddList({
-  label,
-  placeholder,
-  items,
-  onAdd,
-  onRemove,
-}: {
-  label: string;
-  placeholder: string;
-  items: { id: string; text: string; done?: boolean }[];
-  onAdd: (text: string) => void;
-  onRemove: (id: string) => void;
-}) {
-  const [text, setText] = useState("");
-  return (
-    <div>
-      <p className="mb-2 text-[12px] text-faint">{label}</p>
-      <form
-        onSubmit={(e) => {
-          e.preventDefault();
-          if (!text.trim()) return;
-          onAdd(text.trim());
-          setText("");
-        }}
-      >
-        <Input value={text} onChange={(e) => setText(e.target.value)} placeholder={`${placeholder}, then Enter`} />
-      </form>
-      <ul className="mt-2">
-        {items.map((item) => (
-          <li key={item.id} className="group flex items-center gap-2 py-1.5 text-[14px]">
-            <span className={item.done ? "min-w-0 flex-1 truncate text-faint line-through" : "min-w-0 flex-1 truncate"}>{item.text}</span>
-            <IconButton label="Delete" onClick={() => onRemove(item.id)} className="size-7 hover:text-danger sm:opacity-0 sm:group-hover:opacity-100">
-              <X className="size-3.5" />
-            </IconButton>
-          </li>
-        ))}
-      </ul>
     </div>
   );
 }
@@ -163,7 +92,7 @@ function Privacy() {
           <p className="text-[14px] font-medium">
             Passcode {lock ? <span className="text-success">· On</span> : <span className="text-faint">· Off</span>}
           </p>
-          <p className="mt-0.5 text-[13px] text-muted">Asked every time Alexender opens on this device, and after 5 minutes in the background.</p>
+          <p className="mt-0.5 text-[13px] text-muted">Asked every time Alexander opens on this device, and after 5 minutes in the background.</p>
           {setting ? (
             <div className="mt-4 max-w-xs">
               <PasscodeSetup onDone={() => setSetting(false)} onCancel={() => setSetting(false)} />
@@ -208,7 +137,7 @@ function Privacy() {
           </div>
         ) : (
           <p className="mt-1 leading-relaxed text-muted">
-            When you put Alexender online, set <code className="rounded bg-surface-3 px-1 font-mono text-[12px] text-fg">ALEXENDER_PASSWORD</code> in your
+            When you put Alexander online, set <code className="rounded bg-surface-3 px-1 font-mono text-[12px] text-fg">ALEXANDER_PASSWORD</code> in your
             host&apos;s environment variables (or in <code className="rounded bg-surface-3 px-1 font-mono text-[12px] text-fg">.env.local</code>) and every page
             will ask for it.
           </p>
@@ -254,8 +183,8 @@ function SyncCard() {
           <p className="text-muted">
             {on
               ? storage === "cloud"
-                ? "Your data is saved in your private cloud database. Open Alexender on any device and sign in with your website password."
-                : "Your data is saved on this computer. Devices on the same Wi-Fi can open Alexender at this computer's address."
+                ? "Your data is saved in your private cloud database. Open Alexander on any device and sign in with your website password."
+                : "Your data is saved on this computer. Devices on the same Wi-Fi can open Alexander at this computer's address."
               : (message ?? "Sync isn't set up on this site.")}
           </p>
         </div>
@@ -279,7 +208,7 @@ function YourData() {
             {storage?.persisted ? "Saved permanently on this device" : "Saved on this device"}
             {storage && <span className="font-normal text-faint"> · {(storage.usage / 1024 / 1024).toFixed(1)} MB</span>}
           </p>
-          <p className="text-muted">A copy is kept on this device so Alexender is instant and works offline. Export a backup any time.</p>
+          <p className="text-muted">A copy is kept on this device so Alexander is instant and works offline. Export a backup any time.</p>
         </div>
       </div>
       <div className="flex flex-wrap gap-2">
@@ -316,7 +245,7 @@ function YourData() {
           variant="danger"
           className="sm:ml-auto"
           onClick={async () => {
-            if (confirm("Erase all Alexender data on every device? Export a backup first if you want to keep it.")) {
+            if (confirm("Erase all Alexander data on every device? Export a backup first if you want to keep it.")) {
               await clearImages();
               const synced = await resetEverywhere({});
               if (!synced) alert("Erased here, but couldn't reach your other devices. Erase again when you're online.");

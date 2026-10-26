@@ -1,64 +1,55 @@
 "use client";
 
-import { ArrowDown, ArrowUp, Check, ChevronDown, RotateCcw, X } from "lucide-react";
+import { Check, ChevronDown, RotateCcw, X } from "lucide-react";
 import { useState, type ReactNode } from "react";
 import { formatShort, toKey } from "@/lib/date";
 import { cn } from "@/lib/utils";
 import { EditableText, IconButton } from "./ui";
 
-/** One waiting item in an ordered queue (videos, books). */
+/** One waiting item in an ordered queue (videos, books, bucket list). Rendered inside a SortableList. */
 export function QueueRow({
+  handle,
   media,
   title,
   subtitle,
-  isFirst,
-  isLast,
-  onMove,
   onRemove,
   onComplete,
   onRename,
   extra,
+  completeLabel = "Mark complete",
 }: {
-  media: ReactNode;
+  handle: ReactNode;
+  media?: ReactNode;
   title: string;
   subtitle?: string;
-  isFirst: boolean;
-  isLast: boolean;
-  onMove: (dir: -1 | 1) => void;
   onRemove: () => void;
   onComplete: () => void;
   onRename: (title: string) => void;
   /** Shown under the title, e.g. reading progress. */
   extra?: ReactNode;
+  completeLabel?: string;
 }) {
   return (
-    <li className="group -mx-2 flex items-center gap-3 rounded-xl px-2 py-2 transition-colors hover:bg-surface">
+    <div className="group -mx-2 flex items-center gap-2.5 rounded-2xl px-2 py-2 transition-colors duration-200 hover:bg-surface">
+      <div className="flex w-7 shrink-0 justify-center pointer-coarse:hidden sm:opacity-0 sm:transition-opacity sm:group-hover:opacity-100">{handle}</div>
       {media}
-      <div className="min-w-0 flex-1">
-        <EditableText value={title} onSave={(t) => t && onRename(t)} className="line-clamp-2 text-[14px] leading-snug" />
+      <div className="ml-0.5 min-w-0 flex-1">
+        <EditableText value={title} onSave={(t) => t && onRename(t)} className="line-clamp-2 text-[14.5px] leading-snug" />
         {subtitle && <p className="mt-0.5 truncate text-[12px] text-faint">{subtitle}</p>}
         {extra}
       </div>
-      <div className="flex shrink-0 items-center sm:opacity-0 sm:transition-opacity sm:group-hover:opacity-100">
-        <IconButton label="Move up" disabled={isFirst} onClick={() => onMove(-1)} className="max-sm:hidden">
-          <ArrowUp className="size-3.5" />
-        </IconButton>
-        <IconButton label="Move down" disabled={isLast} onClick={() => onMove(1)} className="max-sm:hidden">
-          <ArrowDown className="size-3.5" />
-        </IconButton>
-        <IconButton label="Remove" onClick={onRemove} className="hover:text-danger">
-          <X className="size-3.5" />
-        </IconButton>
-      </div>
+      <IconButton label="Remove" onClick={onRemove} className="shrink-0 hover:text-danger sm:opacity-0 sm:group-hover:opacity-100 sm:focus-visible:opacity-100">
+        <X className="size-3.5" />
+      </IconButton>
       <button
-        aria-label="Mark complete"
-        title="Mark complete"
+        aria-label={completeLabel}
+        title={completeLabel}
         onClick={onComplete}
-        className="flex size-[22px] shrink-0 items-center justify-center rounded-full border-[1.5px] border-faint text-transparent transition-colors hover:border-fg hover:text-fg"
+        className="flex size-[24px] shrink-0 items-center justify-center rounded-full border-[1.5px] border-faint text-transparent transition-[border-color,color,transform] duration-200 hover:border-crystal hover:text-crystal active:scale-90"
       >
         <Check className="size-3" strokeWidth={3} />
       </button>
-    </li>
+    </div>
   );
 }
 
@@ -68,20 +59,23 @@ export function DoneRow({
   title,
   completedAt,
   onReopen,
+  extra,
 }: {
-  media: ReactNode;
+  media?: ReactNode;
   title: string;
   completedAt?: number;
   onReopen: () => void;
+  extra?: ReactNode;
 }) {
   return (
-    <li className="group flex items-center gap-3 py-3">
-      <div className="opacity-60">{media}</div>
+    <li className="group flex items-start gap-3 py-3.5">
+      {media && <div className="opacity-70">{media}</div>}
       <div className="min-w-0 flex-1">
         <p className="line-clamp-2 text-[14px] leading-snug text-muted">{title}</p>
         {completedAt && <p className="mt-0.5 text-[11px] text-faint">Finished {formatShort(toKey(new Date(completedAt)))}</p>}
+        {extra}
       </div>
-      <IconButton label="Move back to queue" onClick={onReopen} className="sm:opacity-0 sm:group-hover:opacity-100">
+      <IconButton label="Move back to the list" onClick={onReopen} className="sm:opacity-0 sm:group-hover:opacity-100 sm:focus-visible:opacity-100">
         <RotateCcw className="size-3.5" />
       </IconButton>
     </li>
@@ -89,16 +83,20 @@ export function DoneRow({
 }
 
 /** Collapsible "finished" section shown under a queue. */
-export function DoneSection({ label, count, children }: { label: string; count: number; children: ReactNode }) {
-  const [open, setOpen] = useState(false);
+export function DoneSection({ label, count, children, defaultOpen = false }: { label: string; count: number; children: ReactNode; defaultOpen?: boolean }) {
+  const [open, setOpen] = useState(defaultOpen);
   if (!count) return null;
   return (
     <section className="mt-12">
-      <button onClick={() => setOpen((o) => !o)} className="mx-auto flex items-center gap-2 text-[13px] font-medium text-muted transition-colors hover:text-fg">
+      <button
+        onClick={() => setOpen((o) => !o)}
+        aria-expanded={open}
+        className="mx-auto flex items-center gap-2 rounded-full px-3 py-1.5 text-[13px] font-medium text-muted transition-colors hover:text-fg"
+      >
         {label} <span className="font-normal text-faint">{count}</span>
-        <ChevronDown className={cn("size-4 text-faint transition-transform", open && "rotate-180")} />
+        <ChevronDown className={cn("size-4 text-faint transition-transform duration-300", open && "rotate-180")} />
       </button>
-      {open && <ul className="mt-2 divide-y divide-line">{children}</ul>}
+      {open && <ul className="animate-fade mt-2 divide-y divide-line">{children}</ul>}
     </section>
   );
 }

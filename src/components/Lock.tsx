@@ -7,7 +7,7 @@ import { createLock, readFails, verifyPasscode, writeFails, writeUnlocked } from
 import { useStore, useUI } from "@/lib/store";
 import { resetEverywhere } from "@/lib/sync";
 import { cn } from "@/lib/utils";
-import { Logo } from "./Logo";
+import { Statue } from "./brand";
 import { Button, Input } from "./ui";
 
 const MAX_ATTEMPTS = 5;
@@ -52,7 +52,7 @@ export function LockScreen() {
       return;
     }
     if (
-      confirm("Forgot your passcode? The only way in is to erase all Alexender data. You can restore from a backup afterwards.") &&
+      confirm("Forgot your passcode? The only way in is to erase all Alexander data. You can restore from a backup afterwards.") &&
       confirm("Erase everything now? This cannot be undone.")
     ) {
       await clearImages();
@@ -126,20 +126,20 @@ export function LockScreen() {
   const dots = length || Math.max(4, code.length);
 
   return (
-    <div className="flex min-h-dvh flex-col items-center justify-center px-6 pb-[env(safe-area-inset-bottom)]">
-      <Logo className="mb-6 size-10" />
-      <p className="text-[15px] font-medium">{name ? `Welcome back, ${name}` : "Alexender is locked"}</p>
-      <p className="mt-1 h-5 text-[13px] text-faint">
+    <div className="relative flex min-h-dvh flex-col items-center justify-center overflow-hidden px-6 pb-[env(safe-area-inset-bottom)]">
+      <Statue priority className="relative mb-6 h-32 w-auto" />
+      <p className="relative text-[20px] font-semibold tracking-tight">{name ? `Welcome back, ${name}` : "Alexander is locked"}</p>
+      <p className="relative mt-1 h-5 text-[13px] text-faint">
         {blocked ? `Too many tries — wait ${Math.ceil((fails.until - now) / 1000)}s` : "Enter your passcode"}
       </p>
 
-      <div className={cn("mt-8 mb-10 flex h-3 gap-3", error && "animate-[shake_0.4s]")}>
+      <div className={cn("relative mt-8 mb-10 flex h-3 gap-3", error && "animate-[shake_0.4s]")}>
         {Array.from({ length: dots }, (_, i) => (
-          <span key={i} className={cn("size-3 rounded-full border border-faint transition-colors", i < code.length && "border-fg bg-fg")} />
+          <span key={i} className={cn("size-3 rounded-full border border-faint transition-[background-color,border-color,transform] duration-200", i < code.length && "scale-110 border-crystal bg-crystal")} />
         ))}
       </div>
 
-      <div className="grid w-full max-w-[264px] grid-cols-3 gap-4">
+      <div className="relative grid w-full max-w-[264px] grid-cols-3 gap-4">
         {KEYS.map((k, i) =>
           k === "" ? (
             length ? (
@@ -157,7 +157,7 @@ export function LockScreen() {
               onClick={() => press(k)}
               className={cn(
                 "flex aspect-square items-center justify-center rounded-full text-2xl font-light transition-colors disabled:opacity-30",
-                k === "del" ? "text-muted hover:text-fg" : "bg-surface-2 hover:bg-surface-3 active:bg-line-strong",
+                k === "del" ? "text-muted hover:text-fg" : "border border-line bg-surface-2/80 backdrop-blur-sm hover:bg-surface-3 active:scale-95 active:bg-line-strong",
               )}
             >
               {k === "del" ? <Delete className="size-5" /> : k}
@@ -166,7 +166,7 @@ export function LockScreen() {
         )}
       </div>
 
-      <button onClick={forgot} className="mt-10 text-[12px] text-faint hover:text-muted">
+      <button onClick={forgot} className="relative mt-10 text-[12px] text-faint hover:text-muted">
         Forgot passcode?
       </button>
     </div>

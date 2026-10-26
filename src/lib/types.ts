@@ -8,6 +8,8 @@ export interface Task {
   priority: Priority;
   time?: string; // HH:MM
   createdAt: number;
+  /** Manual position (drag to reorder). */
+  order?: number;
   /** Last edit time — newest edit wins when devices sync. */
   updatedAt?: number;
   completedAt?: number;
@@ -15,6 +17,8 @@ export interface Task {
   startedAt?: number;
   /** Minutes spent, filled in automatically on completion (editable). */
   spentMin?: number;
+  /** Optional free-form note: details, links, what "done" means. */
+  note?: string;
 }
 
 export interface DayLog {
@@ -22,7 +26,7 @@ export interface DayLog {
   total: number;
   done: number;
   pct: number;
-  /** First time Alexender was opened that day — the fallback start for time tracking. */
+  /** First time Alexander was opened that day — the fallback start for time tracking. */
   firstSeen?: number;
 }
 
@@ -31,6 +35,8 @@ export interface Mission {
   text: string;
   images: string[];
   createdAt: number;
+  /** Manual position (drag to reorder). */
+  order?: number;
   /** Last edit time — newest edit wins when devices sync. */
   updatedAt?: number;
 }
@@ -44,6 +50,8 @@ export interface Goal {
   achieved: boolean;
   achievedAt?: number;
   createdAt: number;
+  /** Manual position (drag to reorder). */
+  order?: number;
   /** Last edit time — newest edit wins when devices sync. */
   updatedAt?: number;
 }
@@ -71,12 +79,28 @@ export interface Book {
   author: string;
   coverUrl?: string;
   coverChecked?: boolean;
+  /** A cover photo you uploaded (wins over the looked-up one). */
+  coverId?: string;
+  /** What you will do with what the book taught you. */
+  action?: string;
   totalPages?: number;
   currentPage?: number;
   done: boolean;
   completedAt?: number;
   createdAt: number;
   /** Last edit time — newest edit wins when devices sync. */
+  updatedAt?: number;
+  order: number;
+}
+
+export interface BucketItem {
+  id: string;
+  title: string;
+  note?: string;
+  imageId?: string;
+  done: boolean;
+  doneAt?: number;
+  createdAt: number;
   updatedAt?: number;
   order: number;
 }

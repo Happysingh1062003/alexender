@@ -23,12 +23,12 @@ export async function exportBackup() {
     data,
     images: await exportImages(allImageIds(data)),
   };
-  downloadFile(`alexender-backup-${todayKey()}.json`, JSON.stringify(backup));
+  downloadFile(`alexander-backup-${todayKey()}.json`, JSON.stringify(backup));
 }
 
 export async function importBackup(file: File) {
   const backup = JSON.parse(await file.text()) as Backup;
-  if (backup.app !== "alexender" || !backup.data) throw new Error("This file is not an Alexender backup.");
+  if (backup.app !== "alexender" || !backup.data) throw new Error("This file is not an Alexander backup.");
   await importImages(backup.images ?? {});
   await resetEverywhere(backup.data);
 }

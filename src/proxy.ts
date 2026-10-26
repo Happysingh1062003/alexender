@@ -1,7 +1,7 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { safeEqual, SESSION_COOKIE, sessionToken, sitePassword } from "@/lib/auth";
 
-/** Blocks the whole site behind the password login when ALEXENDER_PASSWORD is set. */
+/** Blocks the whole site behind the password login when ALEXANDER_PASSWORD is set. */
 export async function proxy(request: NextRequest) {
   const password = sitePassword();
   if (!password) return NextResponse.next();
@@ -16,5 +16,5 @@ export async function proxy(request: NextRequest) {
 }
 
 export const config = {
-  matcher: ["/((?!_next/static|_next/image|login|api/auth|icon.svg|manifest.webmanifest|favicon.ico).*)"],
+  matcher: ["/((?!_next/static|_next/image|login|api/auth|icon.svg|alexander.webp|manifest.webmanifest|favicon.ico).*)"],
 };

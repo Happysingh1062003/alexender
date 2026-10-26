@@ -40,6 +40,7 @@ export const LIFE_EXPECTANCY: Record<string, number> = {
 };
 
 const DAY = 86_400_000;
+export const ALEXANDER_YEARS = 32.9;
 const YEAR = 365.2425 * DAY;
 
 export function expectancyFor(country: string, override?: number) {
@@ -73,6 +74,11 @@ export function computeLife(birthDate: string, expectancyYears: number, now: num
     yearsLeft: left / YEAR,
     weeksLived,
     weeksLeft: Math.max(0, totalWeeks - weeksLived),
+    monthsLived: years * 12 + months,
+    monthsLeft: Math.floor((left / YEAR) * 12),
+    yearsLived: lived / YEAR,
+    /** Alexander the Great died at about 32 years and 10 months. */
+    toAlexander: Math.max(0, Math.ceil((birth + ALEXANDER_YEARS * YEAR - now) / DAY)),
     totalWeeks,
     pctLived: Math.min(100, (lived / (end - birth)) * 100),
   };
