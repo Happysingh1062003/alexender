@@ -1,9 +1,17 @@
 "use client";
 
+import { del, get, set } from "idb-keyval";
 import { create } from "zustand";
 import { clearImages, getImageBlob, getOrFetchImage } from "./images";
 import { mergeData, stableStringify } from "./merge";
-import { allImageIds, DATA_KEYS, normalize, pickData, useStore, type Data } from "./store";
+import {
+  allImageIds,
+  DATA_KEYS,
+  normalize,
+  pickData,
+  useStore,
+  type Data,
+} from "./store";
 import { uid } from "./utils";
 
 /*
@@ -14,16 +22,38 @@ import { uid } from "./utils";
  * merging their old data back in.
  */
 
-export type SyncStatus = "starting" | "syncing" | "synced" | "offline" | "off" | "error";
+export type SyncStatus =
+  "starting" | "syncing" | "synced" | "offline" | "off" | "error";
 
 export const useSync = create<{
   status: SyncStatus;
   storage?: "cloud" | "local";
   lastSynced?: number;
   message?: string;
+  /** Why sync is off or failing, from the server ("no-password", "no-storage") or "signed-out". */
+  code?: string;
+  /** When this device's data was last replaced by another device's (to refresh Settings). */
+  replacedAt?: number;
   /** First sync attempt has finished (so a new device knows whether data exists). */
   ready: boolean;
 }>(() => ({ status: "starting", ready: false }));
+
+/** What this device held before another device's "use my data everywhere" replaced it. */
+export type Replaced = { at: number; data: Data };
+const REPLACED_KEY = "alexender-replaced";
+export const readReplaced = () =>
+  get<Replaced>(REPLACED_KEY).catch(() => undefined);
+export const forgetReplaced = () => del(REPLACED_KEY).catch(() => {});
+
+const hasContent = (d: Data) =>
+  d.tasks.length +
+    d.missions.length +
+    d.goals.length +
+    d.videos.length +
+    d.books.length +
+    d.bucket.length +
+    Object.keys(d.journal).length >
+  0;
 
 type ServerDoc = { data: Partial<Data> & { epoch?: string }; version: number };
 
@@ -67,8 +97,22 @@ let applying = false;
 let pushTimer: ReturnType<typeof setTimeout> | undefined;
 let chain: Promise<unknown> = Promise.resolve();
 
+let retryTimer: ReturnType<typeof setTimeout> | undefined;
+/** After a failure, try again soon rather than waiting for the 30-second heartbeat. */
+const retrySoon = () => {
+  clearTimeout(retryTimer);
+  retryTimer = setTimeout(syncNow, 10_000);
+};
+
 /** Run sync steps strictly one after another. */
-const run = (fn: () => Promise<void>) => (chain = chain.then(fn, fn).catch(() => useSync.setState({ status: "error" })));
+const run = (fn: () => Promise<void>) =>
+  (chain = chain.then(fn, fn).catch(() => {
+    useSync.setState({
+      status: "error",
+      message: "Couldn't save to the cloud — retrying.",
+    });
+    retrySoon();
+  }));
 
 export const syncNow = () => run(sync);
 
@@ -99,24 +143,45 @@ export function startSync() {
 }
 
 async function sync() {
-  if (useSync.getState().status === "off") return;
+  // While sync is off (no database or password yet) keep checking quietly, so it switches on by
+  // itself once the site is set up — no reload needed.
+  const quiet = useSync.getState().status === "off";
   pushTimer = undefined;
-  useSync.setState({ status: "syncing" });
+  if (!quiet) useSync.setState({ status: "syncing" });
 
   let res: Response;
   try {
-    res = await fetch("/api/sync", { cache: "no-store", signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS) });
+    res = await fetch("/api/sync", {
+      cache: "no-store",
+      signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
+    });
   } catch {
     useSync.setState({ status: "offline" });
+    retrySoon();
     return;
   }
-  if ([401, 403, 404, 503].includes(res.status)) {
-    const body = (await res.json().catch(() => ({}))) as { error?: string };
-    useSync.setState({ status: "off", message: body.error });
+  if (res.status === 401) {
+    // The session cookie expired or the password changed: changes stay on this device until sign-in.
+    useSync.setState({
+      status: "error",
+      code: "signed-out",
+      message: "Signed out — sign in again to keep syncing.",
+    });
+    return;
+  }
+  if ([403, 404, 503].includes(res.status)) {
+    const body = (await res.json().catch(() => ({}))) as {
+      error?: string;
+      code?: string;
+    };
+    useSync.setState({ status: "off", code: body.code, message: body.error });
     return;
   }
   if (!res.ok) throw new Error(`sync ${res.status}`);
-  const { storage, doc } = (await res.json()) as { storage: "cloud" | "local"; doc: ServerDoc | null };
+  const { storage, doc } = (await res.json()) as {
+    storage: "cloud" | "local";
+    doc: ServerDoc | null;
+  };
   useSync.setState({ storage });
   await reconcile(doc);
 }
@@ -144,12 +209,27 @@ async function reconcile(doc: ServerDoc | null, attempt = 0): Promise<void> {
   } else {
     const remote = normalize(doc.data);
     const serverEpoch = doc.data.epoch;
-    const resetElsewhere = !!serverEpoch && serverEpoch !== meta.epoch && (!!meta.epoch || serverEpoch.startsWith(RESET_PREFIX));
+    const resetElsewhere =
+      !!serverEpoch &&
+      serverEpoch !== meta.epoch &&
+      (!!meta.epoch || serverEpoch.startsWith(RESET_PREFIX));
     if (resetElsewhere) {
       merged = remote; // another device replaced everything
       epoch = doc.data.epoch;
       writeUploaded(new Set());
-      clearImages().catch(() => {});
+      // Nothing is lost silently: keep what this device had (photos stay on the device too), so it
+      // can be downloaded from Settings. With nothing worth keeping, free the space instead.
+      if (
+        hasContent(local) &&
+        stableStringify(local) !== stableStringify(remote)
+      )
+        void set(REPLACED_KEY, {
+          at: Date.now(),
+          data: local,
+        } satisfies Replaced)
+          .then(() => useSync.setState({ replacedAt: Date.now() }))
+          .catch(() => {});
+      else clearImages().catch(() => {});
     } else {
       merged = mergeData(local, remote);
       epoch = doc.data.epoch ?? epoch ?? uid();
@@ -158,11 +238,17 @@ async function reconcile(doc: ServerDoc | null, attempt = 0): Promise<void> {
 
   if (stableStringify(merged) !== stableStringify(local)) apply(merged);
 
-  const serverUpToDate = doc && doc.data.epoch === epoch && stableStringify(normalize(doc.data)) === stableStringify(merged);
+  const serverUpToDate =
+    doc &&
+    doc.data.epoch === epoch &&
+    stableStringify(normalize(doc.data)) === stableStringify(merged);
   if (serverUpToDate) {
     writeMeta({ version: doc.version, epoch });
   } else {
-    const body = JSON.stringify({ data: { ...merged, epoch }, baseVersion: doc?.version ?? 0 });
+    const body = JSON.stringify({
+      data: { ...merged, epoch },
+      baseVersion: doc?.version ?? 0,
+    });
     let put: Response;
     try {
       put = await fetch("/api/sync", {
@@ -185,7 +271,12 @@ async function reconcile(doc: ServerDoc | null, attempt = 0): Promise<void> {
     writeMeta({ version, epoch });
   }
 
-  useSync.setState({ status: "synced", lastSynced: Date.now(), message: undefined });
+  useSync.setState({
+    status: "synced",
+    lastSynced: Date.now(),
+    message: undefined,
+    code: undefined,
+  });
   await uploadImages(merged);
 }
 
@@ -220,7 +311,8 @@ async function uploadImages(data: Data) {
 export async function resetEverywhere(data: Partial<Data>) {
   const fresh = normalize(data);
   // The server's photos are replaced too, so first make sure this device holds every photo it uses.
-  if (useSync.getState().status !== "off") for (const id of allImageIds(fresh)) await getOrFetchImage(id);
+  if (useSync.getState().status !== "off")
+    for (const id of allImageIds(fresh)) await getOrFetchImage(id);
   apply(fresh);
   writeUploaded(new Set());
   if (useSync.getState().status === "off") return true;

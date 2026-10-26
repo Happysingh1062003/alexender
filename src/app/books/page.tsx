@@ -1,6 +1,6 @@
 "use client";
 
-import { ImagePlus } from "lucide-react";
+import { BookOpen, ImagePlus } from "lucide-react";
 import { useEffect, useState } from "react";
 import { DoneRow, DoneSection, QueueRow } from "@/components/Queue";
 import { SortableList } from "@/components/Sortable";
@@ -45,7 +45,7 @@ function Cover({ book }: { book: Book }) {
 }
 
 /** Page tracker for the book being read: "p. 80 / 254" with a thin bar. */
-function Progress({ book }: { book: Book }) {
+function Progress({ book, onPause }: { book: Book; onPause?: () => void }) {
   const updateBook = useStore((s) => s.updateBook);
   const num = (v: string) => Number(v.replace(/\D/g, "")) || 0;
   const inputClass = "w-10 rounded bg-transparent px-1 text-center font-mono text-[11px] outline-none hover:bg-surface-3 focus:bg-surface-2";
@@ -71,6 +71,11 @@ function Progress({ book }: { book: Book }) {
         />
       </span>
       {book.totalPages ? <ProgressBar value={pct(book.currentPage ?? 0, book.totalPages)} className="max-w-28" tone="crystal" /> : null}
+      {onPause && (
+        <button onClick={onPause} className="ml-auto shrink-0 rounded px-1 text-[11px] text-faint transition-colors hover:text-fg" title="Move back to up next">
+          Pause
+        </button>
+      )}
     </div>
   );
 }
@@ -138,6 +143,20 @@ function ActionForm({ book, onClose }: { book: Book; onClose: () => void }) {
   );
 }
 
+/** Books with page progress count as being read, so earlier data shows correctly. */
+const isReading = (b: Book) => b.reading ?? (b.currentPage ?? 0) > 0;
+
+function Group({ title, count, children }: { title: string; count: number; children: React.ReactNode }) {
+  return (
+    <section className="mb-10">
+      <h2 className="mb-2 flex items-baseline gap-2 text-[13px] font-medium text-muted">
+        {title} <span className="text-[12px] font-normal text-faint tabular-nums">{count}</span>
+      </h2>
+      {children}
+    </section>
+  );
+}
+
 export default function BooksPage() {
   const books = useStore((s) => s.books);
   const { reopenBook, updateBook, deleteBook, reorder } = useStore.getState();
@@ -147,7 +166,9 @@ export default function BooksPage() {
     books.filter((b) => !b.coverChecked).forEach((b) => lookupBook(b.id));
   }, [books]);
 
-  const queue = books.filter((b) => !b.done).sort(byOrder);
+  const open = books.filter((b) => !b.done).sort(byOrder);
+  const reading = open.filter(isReading);
+  const upNext = open.filter((b) => !isReading(b));
   const done = books.filter((b) => b.done).sort((a, b) => (b.completedAt ?? 0) - (a.completedAt ?? 0));
 
   return (
@@ -182,23 +203,55 @@ export default function BooksPage() {
           Tap a cover to use your own photo.
         </p>
       )}
-      {books.length > 0 && queue.length === 0 && <p className="text-center text-[15px] text-faint">Every book read.</p>}
+      {books.length > 0 && open.length === 0 && <p className="text-center text-[15px] text-faint">Every book read.</p>}
 
-      <SortableList items={queue} onReorder={(ids) => reorder("books", ids)}>
-        {(b, handle, i) => (
-          <QueueRow
-            handle={handle}
-            media={<Cover book={b} />}
-            title={b.title}
-            subtitle={b.author}
-            extra={i === 0 || b.currentPage ? <Progress book={b} /> : undefined}
-            onRemove={() => confirm(`Remove “${b.title}”?`) && deleteBook(b.id)}
-            onComplete={() => setFinishing(b)}
-            completeLabel="Mark as read"
-            onRename={(title) => updateBook(b.id, { title })}
-          />
-        )}
-      </SortableList>
+      {/* Read as many at once as you like; each keeps its own page. */}
+      {reading.length > 0 && (
+        <Group title="Reading" count={reading.length}>
+          <SortableList items={reading} onReorder={(ids) => reorder("books", [...ids, ...upNext.map((b) => b.id)])}>
+            {(b, handle) => (
+              <QueueRow
+                handle={handle}
+                media={<Cover book={b} />}
+                title={b.title}
+                subtitle={b.author}
+                extra={<Progress book={b} onPause={() => updateBook(b.id, { reading: false })} />}
+                onRemove={() => confirm(`Remove “${b.title}”?`) && deleteBook(b.id)}
+                onComplete={() => setFinishing(b)}
+                completeLabel="Mark as read"
+                onRename={(title) => updateBook(b.id, { title })}
+              />
+            )}
+          </SortableList>
+        </Group>
+      )}
+
+      {upNext.length > 0 && (
+        <Group title={reading.length ? "Up next" : "To read"} count={upNext.length}>
+          <SortableList items={upNext} onReorder={(ids) => reorder("books", [...reading.map((b) => b.id), ...ids])}>
+            {(b, handle) => (
+              <QueueRow
+                handle={handle}
+                media={<Cover book={b} />}
+                title={b.title}
+                subtitle={b.author}
+                extra={
+                  <button
+                    onClick={() => updateBook(b.id, { reading: true })}
+                    className="mt-1.5 inline-flex items-center gap-1.5 rounded-full border border-line-strong px-2.5 py-0.5 text-[11px] text-muted transition-colors hover:border-faint hover:text-fg"
+                  >
+                    <BookOpen className="size-3" /> Start reading
+                  </button>
+                }
+                onRemove={() => confirm(`Remove “${b.title}”?`) && deleteBook(b.id)}
+                onComplete={() => setFinishing(b)}
+                completeLabel="Mark as read"
+                onRename={(title) => updateBook(b.id, { title })}
+              />
+            )}
+          </SortableList>
+        </Group>
+      )}
 
       <DoneSection label="Read" count={done.length} defaultOpen>
         {done.map((b) => (

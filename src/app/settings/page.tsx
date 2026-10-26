@@ -1,6 +1,7 @@
 "use client";
 
 import { Cloud, Download, HardDrive, LockKeyhole, RefreshCw, Trash2, Upload } from "lucide-react";
+import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 import { lockNow } from "@/components/AppShell";
 import { PasscodeSetup } from "@/components/Lock";
@@ -10,7 +11,7 @@ import { exportBackup, importBackup } from "@/lib/backup";
 import { clearImages } from "@/lib/images";
 import { verifyPasscode } from "@/lib/lock";
 import { useClock, useStore } from "@/lib/store";
-import { resetEverywhere, syncNow, useSync, makeThisDeviceTheSource } from "@/lib/sync";
+import { forgetReplaced, makeThisDeviceTheSource, readReplaced, resetEverywhere, syncNow, useSync, type Replaced } from "@/lib/sync";
 
 function useStorageInfo() {
   const [info, setInfo] = useState<{ persisted: boolean; usage: number } | null>(null);
@@ -148,7 +149,7 @@ function Privacy() {
 }
 
 function SyncCard() {
-  const { status, storage, lastSynced, message } = useSync();
+  const { status, storage, lastSynced, message, code } = useSync();
   const now = useClock((s) => s.now);
   const on = status !== "off";
   const ago = lastSynced ? Math.max(0, Math.round((now - lastSynced) / 60_000)) : null;
@@ -158,7 +159,9 @@ function SyncCard() {
       : status === "offline"
         ? "Offline — changes will sync when you're back online"
         : status === "error"
-          ? "Couldn't sync — will retry"
+          ? code === "signed-out"
+            ? "Signed out — changes are kept on this device"
+            : "Couldn't sync — retrying"
           : status === "syncing" || status === "starting"
             ? "Syncing…"
             : `Synced${ago === null ? "" : ago < 1 ? " just now" : ` ${ago} min ago`}`;
@@ -187,9 +190,17 @@ function SyncCard() {
                 : "Your data is saved on this computer. Devices on the same Wi-Fi can open Alexander at this computer's address."
               : (message ?? "Sync isn't set up on this site.")}
           </p>
+          {code === "signed-out" && (
+            <Link
+              href="/login"
+              className="mt-3 inline-flex h-8 items-center rounded-xl border border-line-strong px-3 text-xs font-medium text-fg transition-colors hover:border-faint hover:bg-surface-2"
+            >
+              Sign in again
+            </Link>
+          )}
         </div>
       </div>
-      {on && <MakeMatch />}
+      {on && code !== "signed-out" && <MakeMatch />}
     </Card>
   );
 }
@@ -224,6 +235,42 @@ function MakeMatch() {
   );
 }
 
+/** What this device held before another device's data replaced it — never thrown away silently. */
+function ReplacedData() {
+  const [replaced, setReplaced] = useState<Replaced | null>(null);
+  const replacedAt = useSync((s) => s.replacedAt);
+  useEffect(() => {
+    readReplaced().then((r) => setReplaced(r ?? null));
+  }, [replacedAt]);
+  if (!replaced) return null;
+  const count = replaced.data.tasks.length;
+  return (
+    <div className="mb-4 rounded-xl border border-line p-3.5 text-[13px] leading-relaxed">
+      <p className="font-medium">This device&apos;s earlier data</p>
+      <p className="text-muted">
+        Replaced on {new Date(replaced.at).toLocaleString(undefined, { day: "numeric", month: "short", hour: "numeric", minute: "2-digit" })} when another device&apos;s data
+        was used everywhere ({count} task{count === 1 ? "" : "s"}). Download it to keep a copy.
+      </p>
+      <div className="mt-3 flex gap-2">
+        <Button size="sm" variant="outline" onClick={() => exportBackup(replaced.data, "earlier-data")}>
+          <Download className="size-3.5" /> Download
+        </Button>
+        <Button
+          size="sm"
+          variant="ghost"
+          onClick={async () => {
+            if (!confirm("Remove this earlier copy from this device?")) return;
+            await forgetReplaced();
+            setReplaced(null);
+          }}
+        >
+          Remove
+        </Button>
+      </div>
+    </div>
+  );
+}
+
 function YourData() {
   const storage = useStorageInfo();
   const [message, setMessage] = useState("");
@@ -232,6 +279,7 @@ function YourData() {
   return (
     <Card>
       <SectionTitle>Your data</SectionTitle>
+      <ReplacedData />
       <div className="mb-4 flex items-start gap-3 rounded-xl bg-surface-2 p-3.5">
         <HardDrive className="mt-0.5 size-4 shrink-0 text-muted" />
         <div className="text-[13px] leading-relaxed">

@@ -168,7 +168,7 @@ function Sidebar() {
           Alexander
         </span>
       </Link>
-      <nav className="flex flex-1 flex-col gap-px">
+      <nav className="-mx-1 flex min-h-0 flex-1 flex-col gap-px overflow-y-auto px-1 [scrollbar-width:none]">
         {NAV.map(({ href, label, icon: Icon }) => {
           const active = isActive(pathname, href);
           return (
@@ -219,6 +219,7 @@ function TopBar() {
   });
   const hasLock = useStore((s) => !!s.settings.lock);
   const syncStatus = useSync((s) => s.status);
+  const syncMessage = useSync((s) => s.message);
   const pathname = usePathname();
   const section = NAV.find((n) => isActive(pathname, n.href));
   // Today already shows its own progress large; elsewhere the bar is a quiet reminder.
@@ -238,10 +239,10 @@ function TopBar() {
             title={
               syncStatus === "offline"
                 ? "Offline — changes will sync when you're back online"
-                : "Sync problem — see Settings"
+                : (syncMessage ?? "Sync problem — see Settings")
             }
           >
-            <CloudOff className="size-4 text-faint" />
+            <CloudOff aria-label="Not synced" className="size-4 text-faint" />
           </Link>
         )}
         {showProgress && (

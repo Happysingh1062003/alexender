@@ -85,10 +85,43 @@ export interface Book {
   action?: string;
   totalPages?: number;
   currentPage?: number;
+  /** Being read now. Several books can be read at once. */
+  reading?: boolean;
   done: boolean;
   completedAt?: number;
   createdAt: number;
   /** Last edit time — newest edit wins when devices sync. */
+  updatedAt?: number;
+  order: number;
+}
+
+/** One entry of a simple list: a to-do, a "don't do" rule, a podcast. */
+export interface ListItem {
+  id: string;
+  title: string;
+  note?: string;
+  /** A link (podcast episodes). */
+  url?: string;
+  done: boolean;
+  doneAt?: number;
+  createdAt: number;
+  updatedAt?: number;
+  order: number;
+}
+
+export interface PlanStep {
+  id: string;
+  text: string;
+  done: boolean;
+}
+
+/** A plan for anything: a title, steps to tick off, and free notes. */
+export interface Plan {
+  id: string;
+  title: string;
+  note?: string;
+  steps: PlanStep[];
+  createdAt: number;
   updatedAt?: number;
   order: number;
 }

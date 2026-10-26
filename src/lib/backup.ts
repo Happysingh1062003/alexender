@@ -14,8 +14,8 @@ interface Backup {
   images: Record<string, string>;
 }
 
-export async function exportBackup() {
-  const data = pickData(useStore.getState());
+/** Download a backup file: this device's data, or another copy such as the one a reset replaced. */
+export async function exportBackup(data: Data = pickData(useStore.getState()), label = "backup") {
   const backup: Backup = {
     app: "alexender",
     version: 1,
@@ -23,7 +23,7 @@ export async function exportBackup() {
     data,
     images: await exportImages(allImageIds(data)),
   };
-  downloadFile(`alexander-backup-${todayKey()}.json`, JSON.stringify(backup));
+  downloadFile(`alexander-${label}-${todayKey()}.json`, JSON.stringify(backup));
 }
 
 export async function importBackup(file: File) {

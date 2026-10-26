@@ -7,7 +7,7 @@ import { Button, Input } from "@/components/ui";
 
 export default function LoginPage() {
   const [password, setPassword] = useState("");
-  const [error, setError] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
 
   return (
@@ -17,7 +17,7 @@ export default function LoginPage() {
         onSubmit={async (e) => {
           e.preventDefault();
           setBusy(true);
-          setError(false);
+          setError(null);
           const res = await fetch("/api/auth", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
@@ -28,7 +28,8 @@ export default function LoginPage() {
             return;
           }
           setBusy(false);
-          setError(true);
+          const body = (await res.json().catch(() => ({}))) as { error?: string };
+          setError(body.error ?? "Wrong password.");
           setPassword("");
         }}
       >
@@ -44,7 +45,7 @@ export default function LoginPage() {
           placeholder="Password"
           className="h-11 text-center"
         />
-        {error && <p className="mt-2 text-[12px] text-danger">Wrong password.</p>}
+        {error && <p className="mt-2 text-[12px] text-danger">{error}</p>}
         <Button className="mt-4 w-full" disabled={!password || busy}>
           {busy ? "Checking…" : "Enter"} <ArrowRight className="size-4" />
         </Button>

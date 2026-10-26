@@ -32,6 +32,11 @@ export async function PUT(request: NextRequest) {
     return Response.json({ version: await storage.reset(body.data) });
   }
 
-  const result = await storage.putDoc(body.data, Number(body.baseVersion) || 0);
+  // A device on an older version doesn't know newer sections; keep those rather than dropping them.
+  const data = body.data as Record<string, unknown>;
+  const current = await storage.getDoc();
+  if (current) for (const [key, value] of Object.entries(current.data as Record<string, unknown>)) if (!(key in data)) data[key] = value;
+
+  const result = await storage.putDoc(data, Number(body.baseVersion) || 0);
   return result.ok ? Response.json({ version: result.version }) : Response.json({ current: result.current }, { status: 409 });
 }
