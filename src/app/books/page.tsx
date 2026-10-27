@@ -49,7 +49,7 @@ function Cover({ book }: { book: Book }) {
 function Progress({ book, onPause }: { book: Book; onPause?: () => void }) {
   const updateBook = useStore((s) => s.updateBook);
   const num = (v: string) => Number(v.replace(/\D/g, "")) || 0;
-  const inputClass = "w-10 rounded bg-transparent px-1 text-center font-mono text-[11px] outline-none hover:bg-surface-3 focus:bg-surface-2";
+  const inputClass = "h-7 w-12 rounded-md bg-transparent px-1 text-center font-mono text-[12px] outline-none hover:bg-surface-3 focus:bg-surface-2";
   return (
     <div className="mt-1.5 flex items-center gap-2 text-[11px] text-faint">
       <span className="shrink-0">
@@ -73,7 +73,7 @@ function Progress({ book, onPause }: { book: Book; onPause?: () => void }) {
       </span>
       {book.totalPages ? <ProgressBar value={pct(book.currentPage ?? 0, book.totalPages)} className="max-w-28" tone="crystal" /> : null}
       {onPause && (
-        <button onClick={onPause} className="ml-auto shrink-0 rounded px-1 text-[11px] text-faint transition-colors hover:text-fg" title="Move back to up next">
+        <button onClick={onPause} className="ml-auto shrink-0 rounded-md px-2 py-1.5 text-[11.5px] text-faint transition-colors hover:text-fg" title="Move back to up next">
           Pause
         </button>
       )}
@@ -239,7 +239,7 @@ export default function BooksPage() {
                 extra={
                   <button
                     onClick={() => updateBook(b.id, { reading: true })}
-                    className="mt-1.5 inline-flex items-center gap-1.5 rounded-full border border-line-strong px-2.5 py-0.5 text-[11px] text-muted transition-colors hover:border-faint hover:text-fg"
+                    className="mt-1.5 inline-flex h-7 items-center gap-1.5 rounded-full border border-line-strong px-3 text-[11.5px] text-muted transition-colors hover:border-faint hover:text-fg"
                   >
                     <BookOpen className="size-3" /> Start reading
                   </button>

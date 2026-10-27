@@ -2,18 +2,46 @@
 
 import { del, get, set } from "idb-keyval";
 import { create } from "zustand";
-import { createJSONStorage, persist, type StateStorage } from "zustand/middleware";
+import { persist, type PersistStorage, type StorageValue } from "zustand/middleware";
 import { todayKey } from "./date";
 import { deleteImages, deleteImagesLater, keepImages } from "./images";
 import type { Book, BucketItem, DayLog, Goal, Habit, HabitCheck, Idea, JournalEntry, ListItem, Mission, MyStory, Plan, Priority, Settings, StoryRead, Task, TimerSession, TimerTask, Video } from "./types";
 import { pct, uid } from "./utils";
 
-const idbStorage: StateStorage = {
-  getItem: async (name) => (await get<string>(name)) ?? null,
-  setItem: async (name, value) => {
-    await set(name, value);
+/*
+ * Saves to IndexedDB in batches: a burst of edits (typing a note) becomes one write a moment
+ * after the last keystroke, instead of re-saving everything on every key. Anything pending is
+ * written at once when the app is hidden or closed.
+ */
+let pendingSave: { name: string; value: StorageValue<Data> } | null = null;
+let saveTimer: ReturnType<typeof setTimeout> | undefined;
+
+function flushSave() {
+  clearTimeout(saveTimer);
+  if (!pendingSave) return;
+  const { name, value } = pendingSave;
+  pendingSave = null;
+  set(name, JSON.stringify(value)).catch(() => {});
+}
+
+if (typeof window !== "undefined") {
+  window.addEventListener("pagehide", flushSave);
+  document.addEventListener("visibilitychange", () => document.hidden && flushSave());
+}
+
+const idbStorage: PersistStorage<Data> = {
+  getItem: async (name) => {
+    const raw = await get<string | StorageValue<Data>>(name);
+    return raw == null ? null : typeof raw === "string" ? JSON.parse(raw) : raw;
+  },
+  setItem: (name, value) => {
+    pendingSave = { name, value };
+    clearTimeout(saveTimer);
+    saveTimer = setTimeout(flushSave, 400);
   },
   removeItem: async (name) => {
+    pendingSave = null;
+    clearTimeout(saveTimer);
     await del(name);
   },
 };
@@ -516,7 +544,7 @@ export const useStore = create<Store>()(
     {
       name: "alexender-data",
       version: 1,
-      storage: createJSONStorage(() => idbStorage),
+      storage: idbStorage,
       skipHydration: true,
       partialize: (s) => pickData(s),
       merge: (persisted, current) => ({ ...current, ...normalize((persisted ?? {}) as Partial<Data>) }),

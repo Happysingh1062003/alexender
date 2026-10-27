@@ -39,12 +39,13 @@ function toItem(s: MyStory): Item {
   return { key: s.id, person: s.person, title: s.title || s.person, when: s.when, body: paragraphs(s.story), lesson: s.lesson, source: s.source, imageId: s.imageId, mine: s };
 }
 
-/** A story's picture: a built-in image file, or a photo you uploaded. */
-function Picture({ item, className, alt = "" }: { item: Item; className?: string; alt?: string }) {
+/** A story's picture: a built-in image file, or a photo you uploaded. Lists use a small thumbnail. */
+function Picture({ item, className, alt = "", thumb }: { item: Item; className?: string; alt?: string; thumb?: boolean }) {
   if (item.imageId) return <StoredImage id={item.imageId} alt={alt} className={className} />;
   if (item.src) {
+    const src = thumb && item.src.startsWith("/stories/") ? item.src.replace("/stories/", "/stories/thumbs/") : item.src;
     // eslint-disable-next-line @next/next/no-img-element
-    return <img src={item.src} alt={alt} loading="lazy" decoding="async" className={className} />;
+    return <img src={src} alt={alt} loading="lazy" decoding="async" className={className} />;
   }
   return <div aria-hidden className={`bg-surface-2 ${className ?? ""}`} />;
 }
@@ -103,7 +104,7 @@ export default function StoriesPage() {
               onClick={() => setOpen(i)}
               className="-mx-2 flex w-[calc(100%+1rem)] items-center gap-4 rounded-2xl px-2 py-2.5 text-left transition-colors hover:bg-surface active:bg-surface"
             >
-              <Picture item={item} className="h-[76px] w-[60px] shrink-0 rounded-xl bg-surface-2 object-cover" />
+              <Picture item={item} thumb className="h-[76px] w-[60px] shrink-0 rounded-xl bg-surface-2 object-cover" />
               <span className="min-w-0 flex-1">
                 <span className="block truncate text-[12px] text-faint">{item.person}</span>
                 <span className="mt-0.5 block text-[15.5px] leading-snug font-medium">{item.title}</span>

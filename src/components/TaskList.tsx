@@ -144,6 +144,7 @@ function TaskRow({
               onKeyDown={(e) => {
                 if (e.key === "Enter") save();
                 if (e.key === "Escape") {
+                  e.preventDefault();
                   handled.current = true;
                   setTitle(task.title);
                   setEditing(false);
@@ -244,7 +245,10 @@ function NoteEditor({ task, onClose }: { task: Task; onClose: () => void }) {
       }}
       onBlur={onClose}
       onKeyDown={(e) => {
-        if (e.key === "Escape") onClose();
+        if (e.key === "Escape") {
+          e.preventDefault();
+          onClose();
+        }
         // Enter adds a line; Ctrl/Cmd + Enter finishes.
         if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) onClose();
       }}

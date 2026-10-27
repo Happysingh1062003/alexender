@@ -45,7 +45,7 @@ export function QueueRow({
         aria-label={completeLabel}
         title={completeLabel}
         onClick={onComplete}
-        className="flex size-[24px] shrink-0 items-center justify-center rounded-full border-[1.5px] border-faint text-transparent transition-[border-color,color,transform] duration-200 hover:border-crystal hover:text-crystal active:scale-90"
+        className="hit flex size-[24px] shrink-0 items-center justify-center rounded-full border-[1.5px] border-faint text-transparent transition-[border-color,color,transform] duration-200 hover:border-crystal hover:text-crystal active:scale-90"
       >
         <Check className="size-3" strokeWidth={3} />
       </button>

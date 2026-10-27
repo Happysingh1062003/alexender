@@ -351,6 +351,16 @@ input[type="time"]::-webkit-calendar-picker-indicator {
   animation: none;
 }
 
+/* A bigger invisible tap area around a small control, so it is easy to hit with a finger. */
+.hit {
+  position: relative;
+}
+.hit::before {
+  content: "";
+  position: absolute;
+  inset: -8px;
+}
+
 .pb-safe {
   padding-bottom: env(safe-area-inset-bottom);
 }

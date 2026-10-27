@@ -125,7 +125,7 @@ function Row({ item, config, handle }: { item: ListItem; config: ListConfig; han
               rel="noopener noreferrer"
               aria-label="Open link"
               title={item.url}
-              className="shrink-0 rounded-md p-1 text-faint transition-colors hover:bg-surface-2 hover:text-fg"
+              className="hit shrink-0 rounded-md p-1 text-faint transition-colors hover:bg-surface-2 hover:text-fg"
             >
               <ExternalLink className="size-3.5" />
             </a>
@@ -146,7 +146,7 @@ function Row({ item, config, handle }: { item: ListItem; config: ListConfig; han
           aria-label={config.completeLabel ?? "Mark done"}
           title={config.completeLabel ?? "Mark done"}
           onClick={() => toggleItem(kind, item.id)}
-          className="mt-1 flex size-[24px] shrink-0 items-center justify-center rounded-full border-[1.5px] border-faint text-transparent transition-[border-color,color,transform] duration-200 hover:border-crystal hover:text-crystal active:scale-90"
+          className="hit mt-1 flex size-[24px] shrink-0 items-center justify-center rounded-full border-[1.5px] border-faint text-transparent transition-[border-color,color,transform] duration-200 hover:border-crystal hover:text-crystal active:scale-90"
         >
           <Check className="size-3" strokeWidth={3} />
         </button>

@@ -117,7 +117,7 @@ function StartForm() {
             <span
               key={t.id}
               className={cn(
-                "group inline-flex h-8 items-center rounded-full border text-[12.5px] transition-colors",
+                "group inline-flex h-9 items-center rounded-full border text-[13px] transition-colors",
                 title.trim().toLowerCase() === t.title.toLowerCase() ? "border-crystal/60 text-fg" : "border-line text-muted hover:border-line-strong",
               )}
             >
@@ -128,7 +128,7 @@ function StartForm() {
                 type="button"
                 aria-label={`Remove ${t.title}`}
                 onClick={async () => (await confirmDialog(`Remove “${t.title}” from your tasks?`, { detail: "Time already recorded stays.", danger: true, confirmLabel: "Remove" })) && deleteTimerTask(t.id)}
-                className="flex h-full items-center pr-2.5 pl-0.5 text-faint opacity-60 hover:text-danger hover:opacity-100"
+                className="flex h-full w-8 items-center justify-center text-faint opacity-60 hover:text-danger hover:opacity-100"
               >
                 <X className="size-3" />
               </button>
@@ -158,7 +158,7 @@ function StartForm() {
         ))}
         <label className={cn("ml-1 inline-flex h-9 items-center gap-2 rounded-full border px-3 text-[13px]", until ? "border-crystal/60 text-fg" : "border-line text-muted")}>
           Until
-          <input type="time" value={until} onChange={(e) => setUntil(e.target.value)} aria-label="End at" className="bg-transparent text-[13px] text-fg outline-none [color-scheme:dark]" />
+          <input type="time" value={until} onChange={(e) => setUntil(e.target.value)} aria-label="End at" className="h-full bg-transparent text-[13px] text-fg outline-none [color-scheme:dark]" />
         </label>
       </div>
 

@@ -82,7 +82,7 @@ export default function LifePage() {
       </section>
 
       <section className="mt-12 pb-6 text-center">
-        <button onClick={() => setEditing((e) => !e)} className="text-[12px] text-faint transition-colors hover:text-fg">
+        <button onClick={() => setEditing((e) => !e)} className="px-2 py-2.5 text-[12px] text-faint transition-colors hover:text-fg">
           Born {fromKey(settings.birthDate).toLocaleDateString(undefined, { day: "numeric", month: "long", year: "numeric" })} ·{" "}
           {settings.lifeExpectancy ? `${settings.lifeExpectancy} years (your estimate)` : `${settings.country}, ${expectancy} years`} ·{" "}
           <span className="underline underline-offset-4">{editing ? "done" : "change"}</span>

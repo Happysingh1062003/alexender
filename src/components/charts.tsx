@@ -185,10 +185,21 @@ export function BarChart({ bars, height = 120, max, onPick, labelEvery = 1 }: { 
   const top = Math.max(1, max ?? Math.max(...bars.map((b) => b.value), 1));
   const hasLabels = bars.some((b) => b.label);
   const slot = bars.length ? width / bars.length : 0;
+  const barAt = (e: React.PointerEvent | React.MouseEvent) => {
+    const r = e.currentTarget.getBoundingClientRect();
+    return Math.min(bars.length - 1, Math.max(0, Math.floor(((e.clientX - r.left) / r.width) * bars.length)));
+  };
 
   return (
     <div ref={ref} className="relative select-none" onPointerLeave={() => setHover(null)}>
-      <div className="flex items-end gap-[3px]" style={{ height }}>
+      <div
+        className="flex touch-pan-y items-end gap-[3px]"
+        style={{ height }}
+        onPointerDown={(e) => setHover(barAt(e))}
+        onPointerMove={(e) => (e.pointerType !== "mouse" || e.buttons) && setHover(barAt(e))}
+        // A tap between two thin bars still picks the nearest one.
+        onClick={(e) => e.target === e.currentTarget && onPick?.(bars[barAt(e)].key)}
+      >
         {bars.map((b, i) => (
           <button
             key={b.key}

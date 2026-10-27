@@ -48,7 +48,7 @@ export default function SettingsPage() {
             step={5}
             value={settings.winThreshold}
             onChange={(e) => updateSettings({ winThreshold: Number(e.target.value) })}
-            className="w-full accent-[var(--crystal)]"
+            className="h-8 w-full accent-[var(--crystal)]"
           />
         </label>
         <p className="mt-3 text-[12px] text-faint">Birth date and country for the Life section are set on the Life page.</p>

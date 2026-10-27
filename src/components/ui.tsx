@@ -355,6 +355,7 @@ export function EditableText({ value, onSave, className, placeholder }: { value:
         onKeyDown={(e) => {
           if (e.key === "Enter") finish(e.currentTarget);
           if (e.key === "Escape") {
+            e.preventDefault(); // cancels this edit only, not a view it sits in
             handled.current = true;
             setEditing(false);
           }
@@ -372,7 +373,8 @@ export function EditableText({ value, onSave, className, placeholder }: { value:
         handled.current = false;
         setEditing(true);
       }}
-      className={cn("block max-w-full cursor-text text-left", !value && "text-faint", className)}
+      // A taller invisible tap area than the line of text, without changing the layout.
+      className={cn("relative block max-w-full cursor-text text-left before:absolute before:inset-x-0 before:-inset-y-1.5 before:content-['']", !value && "text-faint", className)}
     >
       {value || placeholder}
     </button>
@@ -443,7 +445,11 @@ export function SectionTop({ actions = [], children }: { actions?: AddAction[]; 
             autoFocus
             value={text}
             onChange={(e) => setText(e.target.value)}
-            onKeyDown={(e) => e.key === "Escape" && setOpen(null)}
+            onKeyDown={(e) => {
+              if (e.key !== "Escape") return;
+              e.preventDefault();
+              setOpen(null);
+            }}
             aria-label={action.label}
             placeholder={action.placeholder}
             enterKeyHint="done"
