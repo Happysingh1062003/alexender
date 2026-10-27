@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useId, useRef, useState, type ReactNode } from "react";
+import { useCallback, useId, useState, type ReactNode } from "react";
 import { cn } from "@/lib/utils";
 
 /*
@@ -9,12 +9,12 @@ import { cn } from "@/lib/utils";
  */
 
 function useWidth<T extends HTMLElement>() {
-  const ref = useRef<T>(null);
   const [width, setWidth] = useState(0);
-  useEffect(() => {
-    const el = ref.current;
+  // Measured the moment the element appears (so the first frame is already drawn), then kept up to date.
+  const ref = useCallback((el: T | null) => {
     if (!el) return;
-    const ro = new ResizeObserver(([entry]) => setWidth(Math.round(entry.contentRect.width)));
+    setWidth(Math.floor(el.getBoundingClientRect().width));
+    const ro = new ResizeObserver(([entry]) => setWidth(Math.floor(entry.contentRect.width)));
     ro.observe(el);
     return () => ro.disconnect();
   }, []);
@@ -69,10 +69,11 @@ export function TrendChart({ points, target, height = 190, onPick }: { points: T
   const line = (run: number[]) => run.map((i, j) => `${j ? "L" : "M"}${x(i).toFixed(1)},${y(points[i].value!).toFixed(1)}`).join("");
   const area = (run: number[]) => `${line(run)}L${x(run[run.length - 1]).toFixed(1)},${y(0)}L${x(run[0]).toFixed(1)},${y(0)}Z`;
 
-  const pick = (clientX: number) => {
-    const box = ref.current?.getBoundingClientRect();
-    if (!box || n === 0) return null;
-    const i = Math.round((clientX - box.left - pad.l) / (step || 1));
+  // The chart fills its box, so the point under the pointer comes from the chart's own position.
+  const pick = (e: React.MouseEvent<SVGSVGElement>) => {
+    if (n === 0) return null;
+    const box = e.currentTarget.getBoundingClientRect();
+    const i = Math.round((e.clientX - box.left - pad.l) / (step || 1));
     return Math.min(n - 1, Math.max(0, i));
   };
 
@@ -87,11 +88,11 @@ export function TrendChart({ points, target, height = 190, onPick }: { points: T
           width={width}
           height={height}
           className="block touch-pan-y"
-          onPointerMove={(e) => setHover(pick(e.clientX))}
-          onPointerDown={(e) => setHover(pick(e.clientX))}
+          onPointerMove={(e) => setHover(pick(e))}
+          onPointerDown={(e) => setHover(pick(e))}
           onPointerLeave={() => setHover(null)}
           onClick={(e) => {
-            const i = pick(e.clientX);
+            const i = pick(e);
             if (i !== null) onPick?.(points[i].key);
           }}
           role="img"

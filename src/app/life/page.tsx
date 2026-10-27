@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useCallback, useId, useMemo, useState } from "react";
 import { Input, ProgressBar, Segmented, Select } from "@/components/ui";
 import { fromKey } from "@/lib/date";
 import { computeLife, expectancyFor, formatNumber, LIFE_EXPECTANCY } from "@/lib/life";
@@ -8,7 +8,9 @@ import { useClock, useStore } from "@/lib/store";
 
 const DAY = 86_400_000;
 
-type View = "weeks" | "year";
+type View = "days" | "weeks" | "months" | "year";
+const VIEWS: View[] = ["days", "weeks", "months", "year"];
+const YEAR_DAYS = 365.2425;
 
 /** What is left of today, this week, this month and this year. */
 function useCycles(now: number) {
@@ -34,16 +36,29 @@ export default function LifePage() {
   const settings = useStore((s) => s.settings);
   const updateSettings = useStore((s) => s.updateSettings);
   const [editing, setEditing] = useState(false);
-  const view: View = settings.lifeView === "year" ? "year" : "weeks";
+  const view: View = VIEWS.includes(settings.lifeView as View) ? (settings.lifeView as View) : "weeks";
   const expectancy = expectancyFor(settings.country, settings.lifeExpectancy);
   const life = computeLife(settings.birthDate, expectancy, now);
   const cycles = useCycles(now);
+  const year = new Date(now).getFullYear();
+  const yearLeft = Math.ceil((new Date(year + 1, 0, 1).getTime() - now) / DAY);
+
+  // The big number follows the picture below it.
+  const headline: Record<View, [number, string]> = {
+    days: [life.daysLeft, "days left"],
+    weeks: [life.weeksLeft, "weeks left"],
+    months: [life.monthsLeft, "months left"],
+    year: [yearLeft, `days left in ${year}`],
+  };
+  const [count, unit] = headline[view];
 
   return (
     <div className="mx-auto max-w-xl">
       <section className="text-center">
-        <p className="text-[64px] leading-none font-semibold tracking-[-0.04em] tabular-nums sm:text-[80px]">{formatNumber(life.weeksLeft)}</p>
-        <p className="mt-3 text-[14px] text-muted">weeks left</p>
+        <p key={view} className="animate-fade text-[64px] leading-none font-semibold tracking-[-0.04em] tabular-nums sm:text-[80px]">
+          {formatNumber(count)}
+        </p>
+        <p className="mt-3 text-[14px] text-muted">{unit}</p>
       </section>
 
       <section className="mx-auto mt-10 max-w-sm">
@@ -69,16 +84,21 @@ export default function LifePage() {
             value={view}
             onChange={(lifeView) => updateSettings({ lifeView })}
             options={[
-              { value: "weeks", label: "Life in weeks" },
+              { value: "days", label: "Days" },
+              { value: "weeks", label: "Weeks" },
+              { value: "months", label: "Months" },
               { value: "year", label: "This year" },
             ]}
           />
         </div>
-        {view === "weeks" ? (
-          <Grid total={Math.ceil(expectancy) * 52} lived={life.weeksLived} cols={52} labelEvery={10 * 52} labelStep={10} />
-        ) : (
-          <YearDays now={now} />
-        )}
+        {view === "days" && <DayGrid total={Math.round(expectancy * YEAR_DAYS)} lived={life.daysLived} />}
+        {view === "weeks" && <Grid total={Math.ceil(expectancy) * 52} lived={life.weeksLived} cols={52} labelEvery={10 * 52} labelStep={10} />}
+        {/* Two years to a row, so a decade is five rows. */}
+        {view === "months" && <Grid total={Math.round(expectancy * 12)} lived={life.monthsLived} cols={24} labelEvery={120} labelStep={10} />}
+        {view === "year" && <YearDays now={now} />}
+        <p className="mt-4 text-center text-[11.5px] text-faint">
+          {view === "year" ? "Each square is a day of this year." : `Each ${view === "days" ? "dot" : "square"} is one ${view.slice(0, -1)} of your life.`} The dim ones are gone.
+        </p>
       </section>
 
       <section className="mt-12 pb-6 text-center">
@@ -122,6 +142,83 @@ export default function LifePage() {
           </div>
         )}
       </section>
+    </div>
+  );
+}
+
+/** Width of an element, kept up to date. */
+function useWidth<T extends HTMLElement>() {
+  const [width, setWidth] = useState(0);
+  // Measured the moment the element appears (so the first frame is already drawn), then kept up to date.
+  const ref = useCallback((el: T | null) => {
+    if (!el) return;
+    setWidth(Math.floor(el.getBoundingClientRect().width));
+    const ro = new ResizeObserver(([entry]) => setWidth(Math.floor(entry.contentRect.width)));
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, []);
+  return [ref, width] as const;
+}
+
+const DOT = 2; // whole pixels keep twenty-six thousand dots crisp
+const PITCH = 3;
+const LABELS = 24; // room on the left for the decade numbers
+
+/**
+ * Every day of a life, one dot each. Drawn as a few rectangles filled with repeating dot
+ * patterns — so the whole life costs a handful of shapes, not 26,000 of them.
+ */
+function DayGrid({ total, lived }: { total: number; lived: number }) {
+  const [ref, width] = useWidth<HTMLDivElement>();
+  const id = useId().replace(/:/g, "");
+  const cols = Math.max(40, Math.floor((width - LABELS) / PITCH));
+  const rows = Math.ceil(total / cols);
+  const today = Math.min(lived, total - 1);
+  const tr = Math.floor(today / cols);
+  const tc = today % cols;
+  const fullRows = Math.floor(total / cols);
+  const lastRow = total % cols;
+  const W = cols * PITCH;
+  const H = rows * PITCH;
+  const decades = Array.from({ length: Math.floor(total / (YEAR_DAYS * 10)) + 1 }, (_, i) => i * 10);
+
+  return (
+    <div ref={ref} className="animate-fade">
+      {width > 0 && (
+        <div className="relative mx-auto" style={{ width: W + LABELS, paddingLeft: LABELS }}>
+          {decades.map((y) => (
+            <span
+              key={y}
+              className="absolute left-0 -translate-y-1/2 text-[10px] text-faint tabular-nums"
+              style={{ top: Math.floor((y * YEAR_DAYS) / cols) * PITCH + 1 }}
+            >
+              {y}
+            </span>
+          ))}
+          <svg width={W} height={H} viewBox={`0 0 ${W} ${H}`} className="block" role="img" aria-label={`Day ${formatNumber(lived)} of about ${formatNumber(total)}`}>
+            <defs>
+              <pattern id={`${id}-gone`} width={PITCH} height={PITCH} patternUnits="userSpaceOnUse">
+                <rect width={DOT} height={DOT} fill="var(--surface-3)" />
+              </pattern>
+              <pattern id={`${id}-left`} width={PITCH} height={PITCH} patternUnits="userSpaceOnUse">
+                <rect width={DOT} height={DOT} fill="var(--fg)" fillOpacity={0.42} />
+              </pattern>
+            </defs>
+            {/* Gone: whole rows, then this row up to today. */}
+            <rect width={W} height={tr * PITCH} fill={`url(#${id}-gone)`} />
+            <rect y={tr * PITCH} width={tc * PITCH} height={PITCH} fill={`url(#${id}-gone)`} />
+            {/* Still yours: the rest of this row, the rows after it, and the last short row. */}
+            <rect x={(tc + 1) * PITCH} y={tr * PITCH} width={Math.max(0, (Math.min(cols, tr < fullRows ? cols : lastRow) - tc - 1) * PITCH)} height={PITCH} fill={`url(#${id}-left)`} />
+            <rect y={(tr + 1) * PITCH} width={W} height={Math.max(0, fullRows - tr - 1) * PITCH} fill={`url(#${id}-left)`} />
+            {lastRow > 0 && tr < fullRows && <rect y={fullRows * PITCH} width={lastRow * PITCH} height={PITCH} fill={`url(#${id}-left)`} />}
+            {/* Today: a crystal dot with a soft ring, so one day among thousands is easy to find. */}
+            <circle cx={tc * PITCH + DOT / 2} cy={tr * PITCH + DOT / 2} r={5} fill="none" stroke="var(--crystal)" strokeOpacity={0.5} strokeWidth={1}>
+              <animate attributeName="stroke-opacity" values="0.6;0.15;0.6" dur="2.4s" repeatCount="indefinite" />
+            </circle>
+            <rect x={tc * PITCH} y={tr * PITCH} width={DOT} height={DOT} fill="var(--crystal)" />
+          </svg>
+        </div>
+      )}
     </div>
   );
 }
