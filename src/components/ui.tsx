@@ -1,6 +1,6 @@
 "use client";
 
-import { Check, ImagePlus, Plus, X } from "lucide-react";
+import { Check, ChevronDown, ImagePlus, Plus, X } from "lucide-react";
 import {
   useEffect,
   useRef,
@@ -105,17 +105,7 @@ export function Checkbox({ checked, onChange, label, size = "md" }: { checked: b
 }
 
 export function Modal({ open, onClose, title, children, wide }: { open: boolean; onClose: () => void; title?: ReactNode; children: ReactNode; wide?: boolean }) {
-  useBackToClose(open, onClose);
-  useEffect(() => {
-    if (!open) return;
-    const onKey = (e: KeyboardEvent) => e.key === "Escape" && onClose();
-    document.addEventListener("keydown", onKey);
-    document.body.style.overflow = "hidden";
-    return () => {
-      document.removeEventListener("keydown", onKey);
-      document.body.style.overflow = "";
-    };
-  }, [open, onClose]);
+  useBackToClose(open, onClose, { lockScroll: true });
 
   if (!open) return null;
   // Portal to <body> so animated (transformed) page containers can't trap the fixed overlay.
@@ -175,6 +165,113 @@ export function Segmented<T extends string>({ value, onChange, options }: { valu
           {o.label}
         </button>
       ))}
+    </div>
+  );
+}
+
+/**
+ * A dark dropdown that matches the app — the browser's own list is white on Windows and
+ * can't be styled. Arrow keys, Enter and Escape work; a tap outside closes it.
+ */
+export function Select<T extends string>({
+  value,
+  onChange,
+  options,
+  label,
+  className,
+  menuClassName,
+  wide,
+}: {
+  value: T;
+  onChange: (v: T) => void;
+  options: { value: T; label: ReactNode; dot?: string }[];
+  label: string;
+  className?: string;
+  menuClassName?: string;
+  /** Fill the width of its container, like a form field. */
+  wide?: boolean;
+}) {
+  const [open, setOpen] = useState(false);
+  const [active, setActive] = useState(0);
+  const root = useRef<HTMLDivElement>(null);
+  const list = useRef<HTMLUListElement>(null);
+  const current = options.find((o) => o.value === value) ?? options[0];
+
+  useEffect(() => {
+    if (!open) return;
+    const onDown = (e: PointerEvent) => !root.current?.contains(e.target as Node) && setOpen(false);
+    document.addEventListener("pointerdown", onDown);
+    list.current?.querySelector<HTMLElement>('[aria-selected="true"]')?.scrollIntoView({ block: "nearest" });
+    return () => document.removeEventListener("pointerdown", onDown);
+  }, [open]);
+
+  const show = () => {
+    setActive(Math.max(0, options.findIndex((o) => o.value === value)));
+    setOpen(true);
+  };
+  const pick = (v: T) => {
+    onChange(v);
+    setOpen(false);
+  };
+
+  return (
+    <div ref={root} className={cn("relative", wide ? "flex w-full" : "inline-flex")}>
+      <button
+        type="button"
+        aria-haspopup="listbox"
+        aria-expanded={open}
+        aria-label={label}
+        onClick={() => (open ? setOpen(false) : show())}
+        onKeyDown={(e) => {
+          if (e.key === "Escape" && open) {
+            e.preventDefault();
+            e.stopPropagation();
+            setOpen(false);
+          } else if (e.key === "ArrowDown" || e.key === "ArrowUp") {
+            e.preventDefault();
+            if (!open) return show();
+            setActive((i) => (i + (e.key === "ArrowDown" ? 1 : options.length - 1)) % options.length);
+          } else if ((e.key === "Enter" || e.key === " ") && open) {
+            e.preventDefault();
+            pick(options[active].value);
+          }
+        }}
+        className={cn("inline-flex items-center gap-1.5 text-fg outline-none", className)}
+      >
+        {current?.dot && <span aria-hidden className="size-1.5 shrink-0 rounded-full" style={{ background: current.dot }} />}
+        <span className="truncate">{current?.label}</span>
+        <ChevronDown className={cn("size-3.5 shrink-0 text-faint transition-transform duration-200", open && "rotate-180")} />
+      </button>
+      {open && (
+        <ul
+          ref={list}
+          role="listbox"
+          aria-label={label}
+          className={cn(
+            "animate-fade absolute top-[calc(100%+0.5rem)] left-0 z-40 max-h-72 min-w-[10rem] overflow-y-auto rounded-xl border border-line-strong bg-surface-2 p-1 shadow-[0_12px_40px_rgba(0,0,0,0.6)]",
+            menuClassName,
+          )}
+        >
+          {options.map((o, i) => (
+            <li key={o.value} role="option" aria-selected={o.value === value}>
+              <button
+                type="button"
+                tabIndex={-1}
+                onPointerEnter={() => setActive(i)}
+                onClick={() => pick(o.value)}
+                className={cn(
+                  "flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-[13.5px] whitespace-nowrap transition-colors",
+                  i === active ? "bg-surface-3 text-fg" : "text-muted",
+                )}
+              >
+                {o.dot && <span aria-hidden className="size-1.5 shrink-0 rounded-full" style={{ background: o.dot }} />}
+                <span className="flex-1">{o.label}</span>
+                {o.value === value && <Check className="size-3.5 text-crystal" />}
+              </button>
+            </li>
+          ))}
+        </ul>
+      )}
     </div>
   );
 }
@@ -378,7 +475,7 @@ export function toast(message: string, action?: ToastItem["action"]) {
 export function Toaster() {
   const items = useToasts((s) => s.items);
   return (
-    <div aria-live="polite" className="pointer-events-none fixed inset-x-0 bottom-[calc(5.5rem+env(safe-area-inset-bottom))] z-[60] flex flex-col items-center gap-2 px-4 lg:bottom-8">
+    <div aria-live="polite" className="pointer-events-none fixed inset-x-0 bottom-[calc(8.5rem+env(safe-area-inset-bottom))] z-[60] flex flex-col items-center gap-2 px-4 lg:bottom-8">
       {items.map((t) => (
         <div
           key={t.id}

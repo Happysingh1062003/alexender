@@ -35,8 +35,9 @@ export const ytThumb = (id: string, size: "mq" | "hq" = "mq") => `https://i.ytim
 
 /** "45m", "1h 20m". */
 export const formatMinutes = (min: number) => {
-  const h = Math.floor(min / 60);
-  const m = Math.round(min % 60);
+  const total = Math.round(min);
+  const h = Math.floor(total / 60);
+  const m = total % 60;
   return h ? (m ? `${h}h ${m}m` : `${h}h`) : `${m}m`;
 };
 
@@ -59,33 +60,22 @@ export interface ParsedTask {
   title: string;
   date: string;
   priority: Priority;
-  time?: string;
 }
 
 /**
  * Natural quick-add without AI:
- *   "Gym !high @6pm tomorrow"  → priority high, 18:00, tomorrow
- *   "Call mom @18:30 on friday" → next Friday
- *   "Read +3d"                  → three days from today
+ *   "Gym !high tomorrow" → priority high, tomorrow
+ *   "Call mom on friday" → next Friday
+ *   "Read +3d"           → three days from today
  */
 export function parseQuickTask(input: string, baseDate: string): ParsedTask {
   let text = ` ${input} `;
   let priority: Priority = "med";
-  let time: string | undefined;
   let date = baseDate;
 
   text = text.replace(/\s!(high|h|1|med|m|2|low|l|3)(?=\s)/i, (_, p: string) => {
     const k = p.toLowerCase();
     priority = k.startsWith("h") || k === "1" ? "high" : k.startsWith("l") || k === "3" ? "low" : "med";
-    return " ";
-  });
-
-  text = text.replace(/\s@(\d{1,2})(?::(\d{2}))?\s?(am|pm)?(?=\s)/i, (_, h: string, m: string, ap: string) => {
-    let hour = Number(h);
-    if (ap?.toLowerCase() === "pm" && hour < 12) hour += 12;
-    if (ap?.toLowerCase() === "am" && hour === 12) hour = 0;
-    if (hour > 23) return _;
-    time = `${String(hour).padStart(2, "0")}:${m ?? "00"}`;
     return " ";
   });
 
@@ -108,7 +98,7 @@ export function parseQuickTask(input: string, baseDate: string): ParsedTask {
     return " ";
   });
 
-  return { title: text.replace(/\s+/g, " ").trim(), date, priority, time };
+  return { title: text.replace(/\s+/g, " ").trim(), date, priority };
 }
 
 export const PRIORITY_ORDER: Record<Priority, number> = { high: 0, med: 1, low: 2 };

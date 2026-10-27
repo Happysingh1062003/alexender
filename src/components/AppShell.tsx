@@ -1,6 +1,6 @@
 "use client";
 
-import { CloudOff, LockKeyhole, LucideProvider } from "lucide-react";
+import { CloudOff, LockKeyhole, LucideProvider, Plus } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useState, type ReactNode } from "react";
@@ -9,12 +9,14 @@ import { AUTO_LOCK_MS, readUnlocked, writeUnlocked } from "@/lib/lock";
 import { NAV } from "@/lib/nav";
 import { useClock, useStore, useUI } from "@/lib/store";
 import { startSync, useSync } from "@/lib/sync";
+import { useBackToClose } from "@/lib/useBackToClose";
 import { cn } from "@/lib/utils";
-import { MoreIcon } from "./icons";
 import { LockScreen } from "./Lock";
 import { Logo } from "./Logo";
 import { Onboarding } from "./Onboarding";
-import { Modal, Toaster } from "./ui";
+import { Toaster } from "./ui";
+import { Dialogs } from "./dialog";
+import { TimerWatcher } from "./TimerWatcher";
 
 const MOBILE_PRIMARY = ["/", "/calendar", "/mission", "/journal"];
 
@@ -133,6 +135,7 @@ export function AppShell({ children }: { children: ReactNode }) {
     return (
       <LucideProvider strokeWidth={1.75}>
         <LockScreen />
+        <Dialogs />
       </LucideProvider>
     );
   }
@@ -147,12 +150,14 @@ export function AppShell({ children }: { children: ReactNode }) {
         {/* Keyed by route so every section arrives with the same quiet rise. */}
         <main
           key={pathname}
-          className="animate-page mx-auto w-full max-w-5xl px-4 pt-6 pb-28 sm:px-6 lg:px-10 lg:pt-12 lg:pb-16"
+          className="animate-page mx-auto w-full max-w-5xl px-4 pt-6 pb-[calc(9.5rem+env(safe-area-inset-bottom))] sm:px-6 lg:px-10 lg:pt-12 lg:pb-16"
         >
           {children}
         </main>
         <BottomNav />
         <Toaster />
+        <Dialogs />
+        <TimerWatcher />
       </div>
     </LucideProvider>
   );
@@ -226,7 +231,7 @@ function TopBar() {
   const showProgress = pathname !== "/";
 
   return (
-    <header className="sticky top-0 z-20 border-b border-line/70 bg-bg/80 backdrop-blur-xl">
+    <header className="sticky top-0 z-20 border-b border-line/70 bg-bg/80 pt-[env(safe-area-inset-top)] backdrop-blur-xl">
       <div className="mx-auto flex h-13 max-w-5xl items-center gap-3 px-4 sm:px-6 lg:px-10">
         <p className="text-[15px] font-medium lg:hidden">
           {pathname === "/" ? date : (section?.label ?? "Alexander")}
@@ -285,19 +290,12 @@ function TopBar() {
 
 function BottomNav() {
   const pathname = usePathname();
-  // The sheet belongs to the page it was opened on: arriving at another page closes it. Closing it
-  // only after the navigation keeps its Back-gesture entry from undoing that navigation.
-  const [moreAt, setMoreAt] = useState<string | null>(null);
-  const more = moreAt === pathname;
-  const setMore = (open: boolean) => setMoreAt(open ? pathname : null);
   const primary = NAV.filter((n) => MOBILE_PRIMARY.includes(n.href));
-  const rest = NAV.filter((n) => !MOBILE_PRIMARY.includes(n.href));
-  const moreActive = rest.some((n) => isActive(pathname, n.href));
 
   return (
     <>
       <nav className="pb-safe fixed inset-x-0 bottom-0 z-30 border-t border-line bg-bg/90 backdrop-blur-xl lg:hidden">
-        <div className="mx-auto grid h-15 max-w-md grid-cols-5">
+        <div className="mx-auto grid h-15 max-w-md grid-cols-4 px-[env(safe-area-inset-left)]">
           {primary.map(({ href, label, icon: Icon }) => {
             const active = isActive(pathname, href);
             return (
@@ -315,38 +313,65 @@ function BottomNav() {
               </Link>
             );
           })}
-          <button
-            onClick={() => setMore(true)}
-            className={cn(
-              "flex flex-col items-center justify-center gap-1 text-[10px] font-medium",
-              moreActive ? "text-fg" : "text-faint",
-            )}
-          >
-            <MoreIcon className="size-[22px]" />
-            All
-          </button>
         </div>
       </nav>
-      <Modal open={more} onClose={() => setMore(false)} title="All sections">
-        <div className="grid grid-cols-3 gap-2 pb-1">
-          {NAV.map(({ href, label, icon: Icon }) => (
-            <Link
-              key={href}
-              href={href}
-              onClick={() => isActive(pathname, href) && setMore(false)}
-              className={cn(
-                "flex aspect-square flex-col items-center justify-center gap-2.5 rounded-2xl border text-[13px] font-medium transition-colors",
-                isActive(pathname, href)
-                  ? "border-line-strong bg-surface-2 text-fg"
-                  : "border-line text-muted hover:bg-surface-2 hover:text-fg",
-              )}
-            >
-              <Icon className="size-6" />
-              {label}
-            </Link>
-          ))}
-        </div>
-      </Modal>
+      <Orb />
     </>
+  );
+}
+
+/**
+ * The phone's way to every section: a small glowing orb floating above the bar. Tap it and the
+ * sections fan out above it; tap again, tap outside, or swipe back to close.
+ */
+function Orb() {
+  const pathname = usePathname();
+  // Open on the page it was opened on: arriving at another page closes it, after the navigation.
+  const [openAt, setOpenAt] = useState<string | null>(null);
+  const open = openAt === pathname;
+  const close = () => setOpenAt(null);
+  useBackToClose(open, close);
+
+  return (
+    <div className="lg:hidden">
+      {open && <div aria-hidden onClick={close} className="animate-fade fixed inset-0 z-40 bg-black/55 backdrop-blur-sm" />}
+      {open && (
+        <nav
+          aria-label="All sections"
+          className="orb-panel fixed right-4 z-50 max-h-[calc(100dvh-11rem-env(safe-area-inset-top)-env(safe-area-inset-bottom))] w-[min(20rem,calc(100vw-2rem))] overflow-y-auto overscroll-contain rounded-3xl border border-line-strong bg-surface/95 p-2 shadow-[0_24px_60px_rgba(0,0,0,0.6)] backdrop-blur-xl"
+          style={{ bottom: "calc(8.75rem + env(safe-area-inset-bottom))" }}
+        >
+          <div className="grid grid-cols-3 gap-1">
+            {NAV.map(({ href, label, icon: Icon }, i) => {
+              const active = isActive(pathname, href);
+              return (
+                <Link
+                  key={href}
+                  href={href}
+                  onClick={() => active && close()}
+                  style={{ animationDelay: `${Math.min(i, 14) * 18}ms` }}
+                  className={cn(
+                    "orb-item flex flex-col items-center justify-center gap-1.5 rounded-2xl py-3 text-[11.5px] font-medium transition-colors",
+                    active ? "bg-surface-3 text-fg" : "text-muted active:bg-surface-2",
+                  )}
+                >
+                  <Icon className="size-[21px]" />
+                  {label}
+                </Link>
+              );
+            })}
+          </div>
+        </nav>
+      )}
+      <button
+        onClick={() => (open ? close() : setOpenAt(pathname))}
+        aria-label={open ? "Close sections" : "All sections"}
+        aria-expanded={open}
+        className={cn("orb fixed right-4 z-50 flex size-[52px] items-center justify-center rounded-full text-white/90 transition-transform duration-300 active:scale-90", open && "rotate-45")}
+        style={{ bottom: "calc(4.75rem + env(safe-area-inset-bottom))" }}
+      >
+        <Plus className="size-5 drop-shadow" strokeWidth={2} />
+      </button>
+    </div>
   );
 }

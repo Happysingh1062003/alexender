@@ -113,7 +113,7 @@ function Row({ item, config, handle }: { item: ListItem; config: ListConfig; han
 
   return (
     <div className="group -mx-2 flex items-start gap-2.5 rounded-2xl px-2 py-2.5 transition-colors duration-200 hover:bg-surface">
-      <div className="flex w-7 shrink-0 justify-center pt-0.5 pointer-coarse:hidden sm:opacity-0 sm:transition-opacity sm:group-hover:opacity-100">{handle}</div>
+      <div className="flex w-7 shrink-0 justify-center pt-0.5 pointer-coarse:hidden pointer-fine:opacity-0 pointer-fine:transition-opacity pointer-fine:group-hover:opacity-100">{handle}</div>
       {!completable && <span aria-hidden className="mt-[9px] size-1.5 shrink-0 rounded-full bg-faint" />}
       <div className="ml-0.5 min-w-0 flex-1">
         <div className="flex items-center gap-1.5">
@@ -135,10 +135,10 @@ function Row({ item, config, handle }: { item: ListItem; config: ListConfig; han
           value={item.note ?? ""}
           placeholder="Add a note"
           onSave={(note) => updateItem(kind, item.id, { note: note || undefined })}
-          className={cn("mt-0.5 text-[12.5px] text-faint", !item.note && "sm:opacity-0 sm:group-hover:opacity-100")}
+          className={cn("mt-0.5 text-[12.5px] text-faint", !item.note && "pointer-fine:opacity-0 pointer-fine:group-hover:opacity-100")}
         />
       </div>
-      <IconButton label="Remove" onClick={remove} className="shrink-0 hover:text-danger sm:opacity-0 sm:group-hover:opacity-100 sm:focus-visible:opacity-100">
+      <IconButton label="Remove" onClick={remove} className="shrink-0 hover:text-danger pointer-fine:opacity-0 pointer-fine:group-hover:opacity-100 pointer-fine:focus-visible:opacity-100">
         <X className="size-3.5" />
       </IconButton>
       {completable && (

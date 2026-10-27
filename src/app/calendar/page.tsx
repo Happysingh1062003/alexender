@@ -20,6 +20,7 @@ import { addDays, formatShort, fromKey, toKey, WEEKDAYS } from "@/lib/date";
 import { currentStreak, dayResult, lastNDays, rangeSummary } from "@/lib/stats";
 import { useClock, useStore } from "@/lib/store";
 import { cn, formatMinutes } from "@/lib/utils";
+import { minutesByDay } from "@/lib/timer";
 
 /** Day colour: crystal for a won day, grey otherwise — stronger the more you finished. */
 const dayFill = (pct: number, win: boolean) =>
@@ -37,7 +38,8 @@ const longDate = (key: string) =>
 export default function CalendarPage() {
   const today = useClock((s) => s.today);
   const days = useStore((s) => s.days);
-  const tasks = useStore((s) => s.tasks);
+  const sessions = useStore((s) => s.timerSessions);
+  const now = useClock((s) => s.now);
   const threshold = useStore((s) => s.settings.winThreshold);
   const [month, setMonth] = useState(() => today.slice(0, 7));
   const [selected, setSelected] = useState(today);
@@ -73,13 +75,8 @@ export default function CalendarPage() {
     calendarRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
   };
 
-  // Minutes recorded on finished tasks, per day.
-  const focus = useMemo(() => {
-    const map: Record<string, number> = {};
-    for (const t of tasks)
-      if (t.done && t.spentMin) map[t.date] = (map[t.date] ?? 0) + t.spentMin;
-    return map;
-  }, [tasks]);
+  // Minutes timed in the Timer, per day.
+  const focus = useMemo(() => minutesByDay(sessions, now), [sessions, now]);
 
   const stats = useMemo(() => {
     const dates = lastNDays(today, Number(range));

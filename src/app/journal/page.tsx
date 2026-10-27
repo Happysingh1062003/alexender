@@ -4,8 +4,9 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { ChevronLeft } from "lucide-react";
 import { useBackToClose } from "@/lib/useBackToClose";
+import { SectionProgress } from "@/components/SectionProgress";
 import { PillButton, SectionTop } from "@/components/ui";
-import { fromKey } from "@/lib/date";
+import { addDays, fromKey } from "@/lib/date";
 import { useClock, useStore } from "@/lib/store";
 
 export default function JournalPage() {
@@ -14,6 +15,12 @@ export default function JournalPage() {
   const [open, setOpen] = useState<string | null>(null);
 
   const entries = useMemo(() => Object.values(journal).sort((a, b) => b.date.localeCompare(a.date)), [journal]);
+
+  // This month: days written out of days so far. Streak: consecutive days up to today (or yesterday).
+  const dayOfMonth = Number(today.slice(8, 10));
+  const thisMonth = entries.filter((e) => e.date.slice(0, 7) === today.slice(0, 7) && e.text.trim()).length;
+  let streak = 0;
+  for (let d = journal[today]?.text.trim() ? today : addDays(today, -1); journal[d]?.text.trim(); d = addDays(d, -1)) streak++;
 
   return (
     <div className="mx-auto max-w-xl">
@@ -24,10 +31,11 @@ export default function JournalPage() {
       </SectionTop>
 
       {entries.length > 0 && (
-        <p className="-mt-4 mb-10 text-center font-mono text-[12px] text-faint tabular-nums">
-          <span className="text-fg">{entries.length}</span> {entries.length === 1 ? "entry" : "entries"} ·{" "}
-          {entries.filter((e) => e.date.slice(0, 7) === today.slice(0, 7)).length} this month
-        </p>
+        <SectionProgress
+          value={(thisMonth / dayOfMonth) * 100}
+          label="of days written this month"
+          detail={`${streak}-day streak · ${entries.length} ${entries.length === 1 ? "entry" : "entries"}`}
+        />
       )}
 
       {open && <Entry key={open} date={open} onDone={() => setOpen(null)} />}
@@ -83,7 +91,7 @@ function Entry({ date, onDone }: { date: string; onDone: () => void }) {
   const timer = useRef<ReturnType<typeof setTimeout>>(undefined);
   const pending = useRef<string | null>(null);
   const box = useVisibleViewport();
-  useBackToClose(true, onDone);
+  useBackToClose(true, onDone, { lockScroll: true });
 
   const flush = () => {
     clearTimeout(timer.current);
@@ -93,21 +101,14 @@ function Entry({ date, onDone }: { date: string; onDone: () => void }) {
     setSaved(true);
   };
 
-  // Save whatever is pending when leaving the day; keep the page behind still.
-  useEffect(() => {
-    document.body.style.overflow = "hidden";
-    return () => {
-      document.body.style.overflow = "";
+  // Save whatever is pending when leaving the day.
+  useEffect(
+    () => () => {
       clearTimeout(timer.current);
       if (pending.current !== null) setJournal(date, pending.current);
-    };
-  }, [date, setJournal]);
-
-  useEffect(() => {
-    const onKey = (e: KeyboardEvent) => e.key === "Escape" && onDone();
-    document.addEventListener("keydown", onKey);
-    return () => document.removeEventListener("keydown", onKey);
-  }, [onDone]);
+    },
+    [date, setJournal],
+  );
 
   const words = text.trim() ? text.trim().split(/\s+/).length : 0;
   const d = fromKey(date);

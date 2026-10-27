@@ -5,13 +5,13 @@ import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 import { lockNow } from "@/components/AppShell";
 import { PasscodeSetup } from "@/components/Lock";
-import { MissionsAndGoals } from "@/components/MissionSettings";
 import { Button, Card, Input, SectionTitle } from "@/components/ui";
 import { exportBackup, importBackup } from "@/lib/backup";
 import { clearImages } from "@/lib/images";
 import { verifyPasscode } from "@/lib/lock";
 import { useClock, useStore } from "@/lib/store";
 import { forgetReplaced, makeThisDeviceTheSource, readReplaced, resetEverywhere, syncNow, useSync, type Replaced } from "@/lib/sync";
+import { alertDialog, confirmDialog, promptDialog } from "@/components/dialog";
 
 function useStorageInfo() {
   const [info, setInfo] = useState<{ persisted: boolean; usage: number } | null>(null);
@@ -54,7 +54,6 @@ export default function SettingsPage() {
         <p className="mt-3 text-[12px] text-faint">Birth date and country for the Life section are set on the Life page.</p>
       </Card>
 
-      <MissionsAndGoals />
       <SyncCard />
       <Privacy />
       <YourData />
@@ -75,12 +74,12 @@ function Privacy() {
       .catch(() => setSiteLock(false));
   }, []);
 
-  const confirmCurrent = () => {
+  const confirmCurrent = async () => {
     if (!lock) return true;
-    const entered = prompt("Enter your current passcode");
+    const entered = await promptDialog("Enter your current passcode", { password: true, inputMode: "numeric" });
     if (entered === null) return false;
     if (verifyPasscode(entered, lock)) return true;
-    alert("That passcode is not right.");
+    await alertDialog("That passcode is not right.");
     return false;
   };
 
@@ -100,7 +99,7 @@ function Privacy() {
             </div>
           ) : (
             <div className="mt-3 flex flex-wrap gap-2">
-              <Button size="sm" variant="outline" onClick={() => confirmCurrent() && setSetting(true)}>
+              <Button size="sm" variant="outline" onClick={async () => (await confirmCurrent()) && setSetting(true)}>
                 {lock ? "Change passcode" : "Set passcode"}
               </Button>
               {lock && (
@@ -108,7 +107,7 @@ function Privacy() {
                   <Button size="sm" variant="outline" onClick={lockNow}>
                     Lock now
                   </Button>
-                  <Button size="sm" variant="danger" onClick={() => confirmCurrent() && updateSettings({ lock: undefined })}>
+                  <Button size="sm" variant="danger" onClick={async () => (await confirmCurrent()) && updateSettings({ lock: undefined })}>
                     Turn off
                   </Button>
                 </>
@@ -221,7 +220,11 @@ function MakeMatch() {
         className="mt-3"
         disabled={busy}
         onClick={async () => {
-          if (!confirm("Use this device's data everywhere? Data on your other devices that isn't on this one will be removed.")) return;
+          const sure = await confirmDialog("Use this device's data everywhere?", {
+            detail: "Data on your other devices that isn't on this one will be removed.",
+            confirmLabel: "Use this device",
+          });
+          if (!sure) return;
           setBusy(true);
           const ok = await makeThisDeviceTheSource();
           setBusy(false);
@@ -259,7 +262,7 @@ function ReplacedData() {
           size="sm"
           variant="ghost"
           onClick={async () => {
-            if (!confirm("Remove this earlier copy from this device?")) return;
+            if (!(await confirmDialog("Remove this earlier copy from this device?", { danger: true, confirmLabel: "Remove" }))) return;
             await forgetReplaced();
             setReplaced(null);
           }}
@@ -311,7 +314,7 @@ function YourData() {
           onChange={async (e) => {
             const file = e.target.files?.[0];
             e.target.value = "";
-            if (!file || !confirm("Importing replaces all current data on every device. Continue?")) return;
+            if (!file || !(await confirmDialog("Import this backup?", { detail: "It replaces all current data on every device.", confirmLabel: "Import" }))) return;
             try {
               await importBackup(file);
               setMessage("Backup restored.");
@@ -324,10 +327,10 @@ function YourData() {
           variant="danger"
           className="sm:ml-auto"
           onClick={async () => {
-            if (confirm("Erase all Alexander data on every device? Export a backup first if you want to keep it.")) {
+            if (await confirmDialog("Erase all Alexander data on every device?", { detail: "Export a backup first if you want to keep it.", danger: true, confirmLabel: "Erase all" })) {
               await clearImages();
               const synced = await resetEverywhere({});
-              if (!synced) alert("Erased here, but couldn't reach your other devices. Erase again when you're online.");
+              if (!synced) await alertDialog("Erased here, but couldn't reach your other devices.", "Erase again when you're online.");
             }
           }}
         >

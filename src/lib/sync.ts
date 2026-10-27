@@ -45,15 +45,10 @@ export const readReplaced = () =>
   get<Replaced>(REPLACED_KEY).catch(() => undefined);
 export const forgetReplaced = () => del(REPLACED_KEY).catch(() => {});
 
+/** Anything you made yourself — worth keeping a copy of before it's replaced. */
 const hasContent = (d: Data) =>
-  d.tasks.length +
-    d.missions.length +
-    d.goals.length +
-    d.videos.length +
-    d.books.length +
-    d.bucket.length +
-    Object.keys(d.journal).length >
-  0;
+  [d.tasks, d.missions, d.goals, d.videos, d.books, d.bucket, d.donts, d.podcasts, d.plans, d.ideas, d.habits, d.timerTasks, d.timerSessions, d.myStories].some((list) => list.length > 0) ||
+  Object.keys(d.journal).length > 0;
 
 type ServerDoc = { data: Partial<Data> & { epoch?: string }; version: number };
 

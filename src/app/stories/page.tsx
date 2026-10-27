@@ -1,14 +1,16 @@
 "use client";
 
-import { ChevronLeft, ChevronRight, ImagePlus, Pencil, Trash2, X } from "lucide-react";
+import { Check, ChevronLeft, ChevronRight, ImagePlus, Pencil, Trash2, X } from "lucide-react";
 import { useEffect, useState } from "react";
 import { createPortal } from "react-dom";
+import { SectionProgress } from "@/components/SectionProgress";
 import { Button, IconButton, ImageUploadButton, Input, Modal, SectionTop, StoredImage, Textarea } from "@/components/ui";
 import { deleteImages } from "@/lib/images";
 import { useClock, useStore } from "@/lib/store";
 import { STORIES } from "@/lib/stories";
 import type { MyStory } from "@/lib/types";
-import { useBackToClose } from "@/lib/useBackToClose";
+import { overlaysOpen, useBackToClose } from "@/lib/useBackToClose";
+import { confirmDialog } from "@/components/dialog";
 
 /** One story as the page shows it — a built-in one or one you added. */
 interface Item {
@@ -51,6 +53,7 @@ function Picture({ item, className, alt = "" }: { item: Item; className?: string
 export default function StoriesPage() {
   const today = useClock((s) => s.today);
   const myStories = useStore((s) => s.myStories);
+  const storiesRead = useStore((s) => s.storiesRead);
   const [open, setOpen] = useState<number | null>(null);
   const [editing, setEditing] = useState<MyStory | "new" | null>(null);
 
@@ -62,6 +65,8 @@ export default function StoriesPage() {
   const dayNumber = Math.floor(new Date(today).getTime() / 86_400_000);
   const featured = ((dayNumber % items.length) + items.length) % items.length;
   const hero = items[featured];
+  const read = new Set(storiesRead.map((r) => r.id));
+  const readCount = items.filter((item) => read.has(item.key)).length;
 
   return (
     <div className="mx-auto max-w-2xl">
@@ -87,7 +92,11 @@ export default function StoriesPage() {
         </div>
       </button>
 
-      <ul className="stagger mt-10">
+      <div className="mt-10">
+        <SectionProgress value={(readCount / items.length) * 100} label="read" detail={`${readCount} of ${items.length} stories`} />
+      </div>
+
+      <ul className="stagger">
         {items.map((item, i) => (
           <li key={item.key} style={{ ["--i" as string]: Math.min(i, 12) }}>
             <button
@@ -100,7 +109,7 @@ export default function StoriesPage() {
                 <span className="mt-0.5 block text-[15.5px] leading-snug font-medium">{item.title}</span>
                 {item.when && <span className="mt-0.5 block text-[12px] text-faint">{item.when}</span>}
               </span>
-              <ChevronRight className="size-4 shrink-0 text-faint" />
+              {read.has(item.key) ? <Check aria-label="Read" className="size-4 shrink-0 text-crystal/80" /> : <ChevronRight className="size-4 shrink-0 text-faint" />}
             </button>
           </li>
         ))}
@@ -229,8 +238,8 @@ function StoryForm({ story, onDone }: { story?: MyStory; onDone: (deleted?: bool
             type="button"
             variant="danger"
             size="sm"
-            onClick={() => {
-              if (!confirm(`Delete “${story.title}”?`)) return;
+            onClick={async () => {
+              if (!(await confirmDialog(`Delete “${story.title}”?`, { danger: true }))) return;
               discardPicked();
               deleteMyStory(story.id);
               onDone(true);
@@ -261,21 +270,24 @@ function StoryForm({ story, onDone }: { story?: MyStory; onDone: (deleted?: bool
 /** Full-screen reader: the image, the story, what it teaches, and where it comes from. */
 function Reader({ items, index, onIndex, onClose, onEdit }: { items: Item[]; index: number; onIndex: (i: number) => void; onClose: () => void; onEdit: (story: MyStory) => void }) {
   const item = items[index];
-  useBackToClose(true, onClose);
+  const markStoryRead = useStore((s) => s.markStoryRead);
+  useBackToClose(true, onClose, { lockScroll: true });
 
+  // Opening a story counts as reading it.
+  useEffect(() => {
+    markStoryRead(item.key);
+  }, [item.key, markStoryRead]);
+
+  // Arrow keys turn the page — but not while editing a story on top, or typing anywhere.
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
-      if (e.key === "Escape") onClose();
+      if (overlaysOpen() > 1 || (e.target as HTMLElement | null)?.closest?.("input, textarea, [contenteditable]")) return;
       if (e.key === "ArrowRight" && index < items.length - 1) onIndex(index + 1);
       if (e.key === "ArrowLeft" && index > 0) onIndex(index - 1);
     };
     document.addEventListener("keydown", onKey);
-    document.body.style.overflow = "hidden";
-    return () => {
-      document.removeEventListener("keydown", onKey);
-      document.body.style.overflow = "";
-    };
-  }, [index, items.length, onIndex, onClose]);
+    return () => document.removeEventListener("keydown", onKey);
+  }, [index, items.length, onIndex]);
 
   const meta = [item.person, item.when, item.where].filter(Boolean).join(" · ");
   return createPortal(

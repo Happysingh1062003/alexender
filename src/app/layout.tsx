@@ -16,6 +16,8 @@ export const metadata: Metadata = {
 export const viewport: Viewport = {
   width: "device-width",
   initialScale: 1,
+  // iPhone zooms into any field under 16px when tapped; this keeps the page still.
+  maximumScale: 1,
   viewportFit: "cover",
   themeColor: "#000000",
   // The on-screen keyboard shrinks the page instead of covering it, so what you type stays visible.

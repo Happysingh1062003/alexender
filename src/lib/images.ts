@@ -52,6 +52,30 @@ export async function deleteImages(ids: string[]) {
   }
 }
 
+// Photos of a just-deleted record wait until its Undo has expired before they are removed.
+const pendingDeletes = new Map<string, ReturnType<typeof setTimeout>>();
+
+export function deleteImagesLater(ids: string[], ms = 8000) {
+  for (const id of ids) {
+    clearTimeout(pendingDeletes.get(id));
+    pendingDeletes.set(
+      id,
+      setTimeout(() => {
+        pendingDeletes.delete(id);
+        void deleteImages([id]);
+      }, ms),
+    );
+  }
+}
+
+/** Undo: keep these photos after all. */
+export function keepImages(ids: string[]) {
+  for (const id of ids) {
+    clearTimeout(pendingDeletes.get(id));
+    pendingDeletes.delete(id);
+  }
+}
+
 export const getImageBlob = (id: string) => get<Blob>(id, imgStore());
 
 const missing = new Set<string>();

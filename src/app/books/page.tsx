@@ -10,6 +10,7 @@ import { deleteImages } from "@/lib/images";
 import { byOrder, useStore } from "@/lib/store";
 import type { Book } from "@/lib/types";
 import { cn, pct } from "@/lib/utils";
+import { confirmDialog } from "@/components/dialog";
 
 /** The cover doubles as its own upload button: tap it to use your own photo of the book. */
 function Cover({ book }: { book: Book }) {
@@ -216,7 +217,7 @@ export default function BooksPage() {
                 title={b.title}
                 subtitle={b.author}
                 extra={<Progress book={b} onPause={() => updateBook(b.id, { reading: false })} />}
-                onRemove={() => confirm(`Remove “${b.title}”?`) && deleteBook(b.id)}
+                onRemove={async () => (await confirmDialog(`Remove “${b.title}”?`, { danger: true, confirmLabel: "Remove" })) && deleteBook(b.id)}
                 onComplete={() => setFinishing(b)}
                 completeLabel="Mark as read"
                 onRename={(title) => updateBook(b.id, { title })}
@@ -243,7 +244,7 @@ export default function BooksPage() {
                     <BookOpen className="size-3" /> Start reading
                   </button>
                 }
-                onRemove={() => confirm(`Remove “${b.title}”?`) && deleteBook(b.id)}
+                onRemove={async () => (await confirmDialog(`Remove “${b.title}”?`, { danger: true, confirmLabel: "Remove" })) && deleteBook(b.id)}
                 onComplete={() => setFinishing(b)}
                 completeLabel="Mark as read"
                 onRename={(title) => updateBook(b.id, { title })}

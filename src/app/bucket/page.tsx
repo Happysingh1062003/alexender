@@ -56,12 +56,8 @@ export default function BucketPage() {
     .filter((b) => b.done)
     .sort((a, b) => (b.doneAt ?? 0) - (a.doneAt ?? 0));
 
+  // The photo is kept until the Undo has expired, so removing never needs a question first.
   const remove = (item: BucketItem) => {
-    if (item.imageId) {
-      if (confirm(`Remove “${item.title}” and its photo?`))
-        deleteBucket(item.id);
-      return;
-    }
     deleteBucket(item.id);
     toast("Removed", { label: "Undo", run: () => restore("bucket", item) });
   };

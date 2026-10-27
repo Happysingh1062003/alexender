@@ -6,7 +6,7 @@ import { TaskList } from "@/components/TaskList";
 import { SectionTop, Segmented } from "@/components/ui";
 import { addDays, fromKey } from "@/lib/date";
 import { useClock, useStore } from "@/lib/store";
-import { cn, formatMinutes, parseQuickTask } from "@/lib/utils";
+import { cn, parseQuickTask } from "@/lib/utils";
 
 type Day = "today" | "tomorrow";
 
@@ -27,10 +27,6 @@ export default function TodayPage() {
   const won = total > 0 && pct >= threshold;
   const toWin = Math.max(0, Math.ceil((threshold / 100) * total) - done);
   const leftover = tasks.filter((t) => t.date === yesterday && !t.done).length;
-  const spent = tasks.reduce(
-    (sum, t) => sum + (t.date === date && t.done ? (t.spentMin ?? 0) : 0),
-    0,
-  );
 
   return (
     <div className="mx-auto max-w-xl">
@@ -38,7 +34,7 @@ export default function TodayPage() {
         actions={[
           {
             label: "Add task",
-            placeholder: day === "today" ? "Gym @6pm" : "Tomorrow — Gym @6pm",
+            placeholder: day === "today" ? "What needs doing?" : "What needs doing tomorrow?",
             keepOpen: true,
             onAdd: (text) => {
               const parsed = parseQuickTask(text, date);
@@ -76,7 +72,6 @@ export default function TodayPage() {
             </div>
             <p className="mt-3 text-[13px] leading-snug text-muted">
               {total === 0 ? "No tasks yet" : won ? <span className="text-crystal">Day won</span> : `${done} of ${total} · ${toWin} more to win`}
-              {spent > 0 && <span className="text-faint"> · {formatMinutes(spent)}</span>}
             </p>
           </div>
         </header>

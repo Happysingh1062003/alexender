@@ -1,12 +1,12 @@
 "use client";
 
-import { ArrowRight, NotebookPen, Play, X } from "lucide-react";
+import { ArrowRight, NotebookPen, X } from "lucide-react";
 import { useMemo, useRef, useState, type ReactNode } from "react";
-import { addDays, formatTime12 } from "@/lib/date";
+import { addDays } from "@/lib/date";
 import { smooth, tap } from "@/lib/motion";
-import { byOrder, useClock, useStore } from "@/lib/store";
+import { byOrder, useStore } from "@/lib/store";
 import type { Task } from "@/lib/types";
-import { cn, formatMinutes, parseQuickTask } from "@/lib/utils";
+import { cn, parseQuickTask } from "@/lib/utils";
 import { SortableList } from "./Sortable";
 import { Checkbox, IconButton, toast } from "./ui";
 
@@ -25,7 +25,6 @@ export function TaskList({
 }) {
   const allTasks = useStore((s) => s.tasks);
   const reorder = useStore((s) => s.reorder);
-  const today = useClock((s) => s.today);
   const tasks = useMemo(
     () => allTasks.filter((t) => t.date === date).sort(sortTasks),
     [allTasks, date],
@@ -43,14 +42,14 @@ export function TaskList({
     <div>
       <SortableList items={open} onReorder={(ids) => reorder("tasks", ids)}>
         {(t, handle) => (
-          <TaskRow task={t} isToday={date === today} handle={handle} />
+          <TaskRow task={t} handle={handle} />
         )}
       </SortableList>
       {done.length > 0 && (
         <ul className={cn(open.length > 0 && "mt-1 border-t border-line pt-1")}>
           {done.map((t) => (
             <li key={t.id}>
-              <TaskRow task={t} isToday={date === today} />
+              <TaskRow task={t} />
             </li>
           ))}
         </ul>
@@ -61,21 +60,16 @@ export function TaskList({
 
 function TaskRow({
   task,
-  isToday,
   handle,
 }: {
   task: Task;
-  isToday: boolean;
   handle?: ReactNode;
 }) {
-  const { toggleTask, deleteTask, updateTask, startTask, restore } =
-    useStore.getState();
-  const now = useClock((s) => s.now);
+  const { toggleTask, deleteTask, updateTask, restore } = useStore.getState();
   const [editing, setEditing] = useState(false);
   const [title, setTitle] = useState(task.title);
   // Set once Enter or Escape has handled the edit, so the blur that follows doesn't act again.
   const handled = useRef(false);
-  const running = !task.done && !!task.startedAt;
   const [noteOpen, setNoteOpen] = useState(false);
   // Opening the note ends any title edit first, so the row settles back to normal.
   const openNote = () => {
@@ -89,7 +83,7 @@ function TaskRow({
     setEditing(true);
   };
 
-  // Editing understands the same shortcuts as adding: "Gym @7am !high tomorrow".
+  // Editing understands the same shortcuts as adding: "Gym !high tomorrow".
   const save = () => {
     if (handled.current) return;
     handled.current = true;
@@ -102,22 +96,9 @@ function TaskRow({
     updateTask(task.id, {
       title: parsed.title,
       date: parsed.date,
-      ...(parsed.time && { time: parsed.time }),
       ...(/(^|\s)!\w/.test(title) && { priority: parsed.priority }),
     });
     setTitle(parsed.title);
-  };
-
-  const editSpent = () => {
-    const value = prompt(
-      "Minutes spent on this task",
-      String(task.spentMin ?? ""),
-    );
-    if (value === null) return;
-    const min = Math.round(Number(value));
-    updateTask(task.id, {
-      spentMin: Number.isFinite(min) && min > 0 ? min : undefined,
-    });
   };
 
   const remove = () => {
@@ -138,11 +119,10 @@ function TaskRow({
       style={{ viewTransitionName: `task-${task.id}` }}
       className={cn(
         "group -mx-2 rounded-2xl px-2 transition-colors duration-200 hover:bg-surface",
-        running && "bg-surface",
       )}
     >
       <div className="flex min-h-[52px] items-center gap-2">
-        <div className="flex w-7 shrink-0 justify-center pointer-coarse:hidden sm:opacity-0 sm:transition-opacity sm:group-hover:opacity-100">
+        <div className="flex w-7 shrink-0 justify-center pointer-coarse:hidden pointer-fine:opacity-0 pointer-fine:transition-opacity pointer-fine:group-hover:opacity-100">
           {handle}
         </div>
         <Checkbox
@@ -197,18 +177,10 @@ function TaskRow({
           <div
             onPointerDown={(e) => e.preventDefault()}
             className={cn(
-              "flex items-center sm:opacity-0 sm:transition-opacity sm:group-hover:opacity-100 sm:focus-within:opacity-100",
-              !editing && "max-sm:hidden",
+              "flex items-center pointer-fine:opacity-0 pointer-fine:transition-opacity pointer-fine:group-hover:opacity-100 pointer-fine:focus-within:opacity-100",
+              !editing && "pointer-coarse:hidden",
             )}
           >
-            {isToday && !task.done && !running && (
-              <IconButton
-                label="Start — track time exactly"
-                onClick={() => startTask(task.id)}
-              >
-                <Play className="size-3.5" />
-              </IconButton>
-            )}
             {!task.done && (
               <IconButton label="Move to next day" onClick={tomorrow}>
                 <ArrowRight className="size-3.5" />
@@ -227,25 +199,6 @@ function TaskRow({
             >
               <X className="size-3.5" />
             </IconButton>
-          </div>
-          {/* One right-aligned slot so times line up down the list. */}
-          <div className="flex w-16 justify-end font-mono">
-            {running ? (
-              <span className="flex items-center gap-1.5 text-fg">
-                <span className="size-1.5 animate-pulse rounded-full bg-crystal" />
-                {formatMinutes(Math.max(0, (now - task.startedAt!) / 60_000))}
-              </span>
-            ) : task.done ? (
-              <button
-                onClick={editSpent}
-                title="Time spent — click to change"
-                className="-mr-1.5 rounded-md px-1.5 py-0.5 hover:bg-surface-3 hover:text-fg"
-              >
-                {task.spentMin ? formatMinutes(task.spentMin) : "+ time"}
-              </button>
-            ) : (
-              task.time && <span>{formatTime12(task.time)}</span>
-            )}
           </div>
         </div>
       </div>

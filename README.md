@@ -17,23 +17,27 @@ Open http://localhost:3000. On a phone, use "Add to Home Screen".
 
 Every section has the same shape: a small label and "+ Add …" button at the top, the content centered below.
 
-- **Today** — a small marble head of Alexander beside today's completion %, then your tasks. A Today / Tomorrow switch lets you plan tomorrow without showing both. Tick a task and its time is added automatically (▶ times it exactly; click the time to correct it). 70% or more is a successful day. Any task can carry a note (the note button beside it; tap the note to edit). Delete and "move to next day" can be undone.
+- **Today** — a small marble head of Alexander beside today's completion %, then your tasks. A Today / Tomorrow switch lets you plan tomorrow without showing both. Quick add understands `!high`, `tomorrow`, `on friday` and `+3d`. Each task can carry a note.
+- **Habits** — add a habit and tick it the day you do it. Only today can be ticked; a day left unticked counts as not done. Each habit shows the last 7 days, its streak, and (tap it) its best streak, done rate and the last six months day by day.
+- **Timer** — type or pick a task, choose when it ends (15 m to 1 h 30 m, or *until* a clock time), and start. It ends on time on any page with a soft chime, shows the countdown in the tab title, and can be stopped early. Today shows time per task; the last week shows how long and on what, day by day. Timed minutes are the focus time in Calendar.
 - **Calendar** — analytics only: average, days won, streak and focus time for 7 / 30 / 90 days; a completion line you can scrub with a finger or the mouse; the month grid; your weekly rhythm; focus time per day; and the last six months as a heatmap. Tap any day in a chart to jump to it.
-- **Mission** — only your missions and goals, large and centered. Tap one to see its words and every image whole, one below another. Add, edit, reorder and remove images in Settings.
+- **Mission** — up to three missions, each with a title, a description and a small icon image, listed as cards. Open one to see its visualization first (your images, whole, one below another) with its plan and progress beside it — or one tap away on a phone.
+- **Goals** — concrete targets with a deadline (days left), an icon, a vision and their own plan; mark them achieved.
 - **Journal** — "Write today" opens a full-screen page that always fits above the phone keyboard, with a back button (the phone's back gesture works too). Saves as you type.
 - **Videos** — paste a YouTube link; title, thumbnail, length, views and date fill in. Play, mark watched, see time left.
 - **Books** — read several at once: each book in Reading keeps its own page progress; the rest wait in Up next (Start reading / Pause). Covers are found automatically, or tap a cover to use your own photo. Finishing a book asks what action you will take.
 - **Stories** — 56 short true stories of courage. Eleven of Alexander (Bucephalus, the Granicus, his doctor's cup, Issus, Tyre, Diogenes, the Gordian knot, Gaugamela, Porus, the Malli wall, the water in the helmet), then great people from India, Europe, Asia, Africa and the Americas — Leonidas, Caesar, Napoleon, Shivaji, Lakshmibai, Genghis Khan, Shackleton, Gandhi, Mandela and more. One simple list, one featured each day. Add your own with **Add story**: who, their photo, the story, and optionally when, the lesson and a source — they sync to every device and can be edited or deleted. Every picture is a real depiction of the person (ancient mosaics, coins, statues, period portraits, photographs from Wikimedia Commons, credited), and every story names its source.
-- **Strategy** — a workspace per challenge with the full set of thinking tools: **Overview** (what winning looks like, now vs. desired, deadline, five whys), **Questions** (a bank of strategic questions — clarify, challenge, terrain & opponent, consequences, focus, perspectives — plus your own), **Map** (drag ideas, goals, actions, risks and questions; connect them with labelled arrows), **SWOT** turned into moves, **Options** (weighted decision matrix with the winner ranked), **Risks** (pre-mortem with likelihood × impact and mitigations), **Plan** (phases and steps, next action, send a step to Today) and **Assumptions** (fact vs. belief, how to test, confirmed or wrong).
-- **Planning** — plan anything: each plan has steps to tick off and free notes.
-- **To-do** — things to get done some time, not tied to a day.
+- **Planning** — simple plans: a status, a priority and a **Complete by** date, then the steps and notes. Steps have due dates, reorder by dragging, show the next step, and go to Today in one tap. Coming up lists dated steps across all plans; active plans sort by status, priority and deadline.
+- **Ideas** — capture an idea in one line, research it (notes), then **Accept** or **Reject** it with the reason. Open, Accepted and Rejected lists; reopen any decision.
 - **Podcasts** — episodes to listen to; paste a link (YouTube titles fill in) or type a name.
 - **Don't do** — habits to avoid and lines you don't cross.
 - **Bucket list** — the life outside work: places, adventures, moments. Add a photo and a note, mark them lived.
-- **Life** — days, weeks, months or years left; rings for what is left of today, this week, month, year and your life; a timeline with Alexander's age on it; and a grid that follows the chosen unit (this year day by day, or your whole life in weeks, months or years).
-- **Settings** — name, success threshold, missions & goals (with their images), passcode, sync, backup export/import.
+- **Life** — weeks left, how much of your life has passed, what's left of today, this week, month and year, and one picture: your life in weeks or this year day by day.
+- **Settings** — name, success threshold, passcode, sync, backup export/import.
 
-Every list — tasks, missions, goals, plans, to-dos, videos, podcasts, books, bucket list, don'ts — can be reordered: drag the ⋮⋮ handle (press and hold on a phone), or focus it and use Enter + arrow keys.
+Missions, Goals, Planning, Ideas, Journal and Stories each show their own progress at the top. On a phone, the four main sections sit in the bottom bar and the glowing orb opens every other section.
+
+Tasks, habits, missions, goals, plan steps, videos, podcasts, books, the bucket list and don'ts can be reordered: drag the ⋮⋮ handle (press and hold on a phone), or focus it and use Enter + arrow keys.
 
 The statue is the marble head of Alexander in the British Museum, cut out from its background into `public/alexander.webp` (51 KB, served locally). Internal storage names still say `alexender`, so existing data and backups keep working.
 

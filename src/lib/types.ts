@@ -32,8 +32,14 @@ export interface DayLog {
 
 export interface Mission {
   id: string;
+  /** The mission's title. */
   text: string;
+  description?: string;
+  /** A small picture shown as the mission's icon. */
+  iconId?: string;
   images: string[];
+  /** The plan that gets you there. */
+  steps?: PlanStep[];
   createdAt: number;
   /** Manual position (drag to reorder). */
   order?: number;
@@ -46,7 +52,9 @@ export interface Goal {
   title: string;
   why: string;
   deadline?: string;
+  iconId?: string;
   images: string[];
+  steps?: PlanStep[];
   achieved: boolean;
   achievedAt?: number;
   createdAt: number;
@@ -113,17 +121,99 @@ export interface PlanStep {
   id: string;
   text: string;
   done: boolean;
+  /** Optional due date (YYYY-MM-DD). */
+  due?: string;
+  doneAt?: number;
 }
 
-/** A plan for anything: a title, steps to tick off, and free notes. */
+export type PlanStatus = "todo" | "doing" | "paused" | "done";
+export type PlanPriority = "low" | "med" | "high";
+
+/** A plan for anything: what and why, a deadline, ordered steps with due dates, and notes. */
 export interface Plan {
   id: string;
   title: string;
+  description?: string;
+  /** Why this plan matters — read it when motivation dips. */
+  why?: string;
+  deadline?: string;
+  status?: PlanStatus;
+  priority?: PlanPriority;
   note?: string;
   steps: PlanStep[];
   createdAt: number;
   updatedAt?: number;
   order: number;
+}
+
+/** Something you do every day. */
+export interface Habit {
+  id: string;
+  title: string;
+  createdAt: number;
+  updatedAt?: number;
+  order?: number;
+}
+
+/**
+ * One day a habit was done. The id is `${habitId}:${date}`, so the same day checked on two
+ * devices is one record. No record for a day means it wasn't done.
+ */
+export interface HabitCheck {
+  id: string;
+  habitId: string;
+  date: string; // YYYY-MM-DD
+  createdAt: number;
+  updatedAt?: number;
+}
+
+/** Something you time — study, gym, deep work. */
+export interface TimerTask {
+  id: string;
+  title: string;
+  createdAt: number;
+  updatedAt?: number;
+  order?: number;
+}
+
+/** One timed session. Running while it has no `endedAt` and `endsAt` is still ahead. */
+export interface TimerSession {
+  id: string;
+  taskId: string;
+  /** The task's name when it ran, so history survives renames and deletes. */
+  title: string;
+  date: string; // YYYY-MM-DD, the day it started
+  startedAt: number;
+  /** When you chose for it to end. */
+  endsAt: number;
+  /** When it actually ended — on time, or stopped early. */
+  endedAt?: number;
+  createdAt: number;
+  updatedAt?: number;
+}
+
+export type IdeaStatus = "new" | "researching" | "accepted" | "rejected";
+
+/** An idea: captured, researched, then accepted or rejected — with the reason. */
+export interface Idea {
+  id: string;
+  title: string;
+  /** What the research found. */
+  notes?: string;
+  status: IdeaStatus;
+  /** Why it was accepted or rejected. */
+  reason?: string;
+  decidedAt?: number;
+  createdAt: number;
+  updatedAt?: number;
+}
+
+/** A story you have read (built-in or your own), so progress follows you across devices. */
+export interface StoryRead {
+  /** The story's id. */
+  id: string;
+  createdAt: number;
+  updatedAt?: number;
 }
 
 /** A story of a great person that you added yourself, with their picture. */
@@ -166,6 +256,8 @@ export interface Settings {
   country: string;
   /** Overrides the country average when set. */
   lifeExpectancy?: number;
+  /** Which picture of time the Life section shows. */
+  lifeView?: string;
   /** Device passcode, stored only as a salted hash. */
   lock?: { salt: string; hash: string; length: number };
   /** Legacy single mission, migrated into `missions`. */

@@ -9,6 +9,7 @@ import { resetEverywhere } from "@/lib/sync";
 import { cn } from "@/lib/utils";
 import { Statue } from "./brand";
 import { Button, Input } from "./ui";
+import { alertDialog, confirmDialog, promptDialog } from "./dialog";
 
 const MAX_ATTEMPTS = 5;
 const COOLDOWN_MS = 30_000;
@@ -37,14 +38,14 @@ export function LockScreen() {
   /** With a website password, proving it resets the passcode; otherwise the only way in is erasing. */
   const forgot = async () => {
     if (siteLock) {
-      const password = prompt("Enter your website password to remove the passcode. Your data stays as it is.");
+      const password = await promptDialog("Enter your website password", { detail: "This removes the passcode. Your data stays as it is.", password: true });
       if (!password) return;
       const res = await fetch("/api/auth", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ password }),
       }).catch(() => null);
-      if (!res?.ok) return alert("That password is not right.");
+      if (!res?.ok) return alertDialog("That password is not right.");
       writeFails({ count: 0, until: 0 });
       useStore.getState().updateSettings({ lock: undefined });
       writeUnlocked(true);
@@ -52,8 +53,8 @@ export function LockScreen() {
       return;
     }
     if (
-      confirm("Forgot your passcode? The only way in is to erase all Alexander data. You can restore from a backup afterwards.") &&
-      confirm("Erase everything now? This cannot be undone.")
+      (await confirmDialog("Forgot your passcode?", { detail: "The only way in is to erase all Alexander data. You can restore from a backup afterwards.", confirmLabel: "Continue" })) &&
+      (await confirmDialog("Erase everything now?", { detail: "This cannot be undone.", danger: true, confirmLabel: "Erase all" }))
     ) {
       await clearImages();
       writeFails({ count: 0, until: 0 });

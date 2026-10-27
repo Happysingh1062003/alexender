@@ -1,110 +1,87 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { Statue } from "@/components/brand";
-import { Input, Segmented } from "@/components/ui";
+import { Input, ProgressBar, Segmented, Select } from "@/components/ui";
 import { fromKey } from "@/lib/date";
-import { ALEXANDER_YEARS, computeLife, expectancyFor, formatNumber, LIFE_EXPECTANCY } from "@/lib/life";
+import { computeLife, expectancyFor, formatNumber, LIFE_EXPECTANCY } from "@/lib/life";
 import { useClock, useStore } from "@/lib/store";
-import { cn } from "@/lib/utils";
 
-type Unit = "days" | "weeks" | "months" | "years";
-const UNITS = ["days", "weeks", "months", "years"] as const;
 const DAY = 86_400_000;
 
-/** How far through today, this week, month and year you are, and what is left of each. */
+type View = "weeks" | "year";
+
+/** What is left of today, this week, this month and this year. */
 function useCycles(now: number) {
   return useMemo(() => {
     const d = new Date(now);
     const startOfDay = new Date(d.getFullYear(), d.getMonth(), d.getDate()).getTime();
     const weekday = (d.getDay() + 6) % 7; // Monday first
-    const startOfWeek = startOfDay - weekday * DAY;
-    const startOfMonth = new Date(d.getFullYear(), d.getMonth(), 1).getTime();
+    const endOfWeek = startOfDay + (7 - weekday) * DAY;
     const endOfMonth = new Date(d.getFullYear(), d.getMonth() + 1, 1).getTime();
-    const startOfYear = new Date(d.getFullYear(), 0, 1).getTime();
     const endOfYear = new Date(d.getFullYear() + 1, 0, 1).getTime();
-    const part = (start: number, end: number) => Math.min(1, Math.max(0, (now - start) / (end - start)));
-    return {
-      day: { passed: part(startOfDay, startOfDay + DAY), left: Math.ceil((startOfDay + DAY - now) / 3_600_000), unit: "hours" },
-      week: { passed: part(startOfWeek, startOfWeek + 7 * DAY), left: Math.ceil((startOfWeek + 7 * DAY - now) / DAY), unit: "days" },
-      month: { passed: part(startOfMonth, endOfMonth), left: Math.ceil((endOfMonth - now) / DAY), unit: "days" },
-      year: { passed: part(startOfYear, endOfYear), left: Math.ceil((endOfYear - now) / DAY), unit: "days" },
-    };
+    return [
+      { label: "Today", value: `${Math.ceil((startOfDay + DAY - now) / 3_600_000)}h` },
+      { label: "Week", value: `${Math.ceil((endOfWeek - now) / DAY)}d` },
+      { label: "Month", value: `${Math.ceil((endOfMonth - now) / DAY)}d` },
+      { label: "Year", value: `${Math.ceil((endOfYear - now) / DAY)}d` },
+    ];
   }, [now]);
 }
 
+/** Your time, plainly: what's left, how much is gone, and one picture of it. */
 export default function LifePage() {
   const now = useClock((s) => s.now);
   const settings = useStore((s) => s.settings);
   const updateSettings = useStore((s) => s.updateSettings);
   const [editing, setEditing] = useState(false);
-  const [unit, setUnit] = useState<Unit>("weeks");
+  const view: View = settings.lifeView === "year" ? "year" : "weeks";
   const expectancy = expectancyFor(settings.country, settings.lifeExpectancy);
   const life = computeLife(settings.birthDate, expectancy, now);
   const cycles = useCycles(now);
 
-  const left: Record<Unit, number> = { days: life.daysLeft, weeks: life.weeksLeft, months: life.monthsLeft, years: Math.floor(life.yearsLeft) };
-  const lived: Record<Unit, number> = { days: life.daysLived, weeks: life.weeksLived, months: life.monthsLived, years: life.years };
-  const years = Math.ceil(expectancy);
-
   return (
     <div className="mx-auto max-w-xl">
-      {/* The one number. */}
       <section className="text-center">
-        <p key={unit} className="animate-rise text-[64px] leading-none font-semibold tracking-[-0.04em] tabular-nums sm:text-[84px]">
-          {formatNumber(left[unit])}
-        </p>
-        <p className="mt-3 text-[14px] text-muted">
-          {unit} left · <span className="text-faint">{formatNumber(lived[unit])} lived</span>
-        </p>
-        <div className="mt-7 flex justify-center">
-          <Segmented value={unit} onChange={setUnit} options={UNITS.map((u) => ({ value: u, label: u[0].toUpperCase() + u.slice(1) }))} />
-        </div>
+        <p className="text-[64px] leading-none font-semibold tracking-[-0.04em] tabular-nums sm:text-[80px]">{formatNumber(life.weeksLeft)}</p>
+        <p className="mt-3 text-[14px] text-muted">weeks left</p>
       </section>
 
-      {/* What is left of today, this week, this month, this year, this life. */}
-      <Section title="Time left">
-        <div className="grid grid-cols-5 gap-2">
-          <Ring label="Today" passed={cycles.day.passed} value={cycles.day.left} unit="h" />
-          <Ring label="Week" passed={cycles.week.passed} value={cycles.week.left} unit="d" />
-          <Ring label="Month" passed={cycles.month.passed} value={cycles.month.left} unit="d" />
-          <Ring label="Year" passed={cycles.year.passed} value={cycles.year.left} unit="d" />
-          <Ring label="Life" passed={life.pctLived / 100} value={Math.floor(life.yearsLeft)} unit="y" accent />
+      <section className="mx-auto mt-10 max-w-sm">
+        <div className="mb-2 flex justify-between text-[12px] text-faint tabular-nums">
+          <span>{life.pctLived.toFixed(1)}% lived</span>
+          <span>{life.yearsLeft.toFixed(1)} years left</span>
         </div>
-      </Section>
-
-      {/* Your life as a line, with Alexander's age on it. */}
-      <Section title="Timeline">
-        <Timeline age={life.yearsLived} expectancy={expectancy} />
-      </Section>
-
-      {/* The grid follows the unit chosen above. */}
-      <Section title={GRID_TITLE[unit]} note={gridNote(unit, life, cycles.year.left)}>
-        {unit === "days" && <YearDays now={now} />}
-        {unit === "weeks" && <Grid total={years * 52} lived={life.weeksLived} cols={52} labelEvery={10 * 52} labelStep={10} />}
-        {unit === "months" && <Grid total={years * 12} lived={life.monthsLived} cols={24} labelEvery={10 * 12} labelStep={10} />}
-        {unit === "years" && <Grid total={years} lived={life.years} cols={10} labelEvery={10} labelStep={10} big />}
-      </Section>
-
-      {/* Alexander's clock. */}
-      <section className="mt-14 flex items-center gap-5 rounded-2xl border border-line px-5 py-5">
-        <Statue className="h-[92px] w-auto shrink-0" />
-        <div className="min-w-0">
-          <p className="text-[11px] text-faint">Alexander · 356–323 BC</p>
-          <p className="mt-1 text-[15px] leading-snug font-medium">He changed the world before he was 33.</p>
-          <p className="mt-1.5 text-[13px] leading-relaxed text-muted">
-            {life.toAlexander > 0 ? (
-              <>
-                You reach his age in <span className="text-crystal tabular-nums">{formatNumber(life.toAlexander)}</span> days.
-              </>
-            ) : (
-              "You have already outlived him."
-            )}
-          </p>
-        </div>
+        <ProgressBar value={life.pctLived} />
       </section>
 
-      <section className="mt-10 pb-6 text-center">
+      <section className="mx-auto mt-10 grid max-w-sm grid-cols-4 text-center">
+        {cycles.map((c) => (
+          <div key={c.label}>
+            <p className="text-[18px] font-semibold tabular-nums">{c.value}</p>
+            <p className="mt-0.5 text-[11px] text-faint">{c.label}</p>
+          </div>
+        ))}
+      </section>
+
+      <section className="mt-14">
+        <div className="mb-5 flex justify-center">
+          <Segmented<View>
+            value={view}
+            onChange={(lifeView) => updateSettings({ lifeView })}
+            options={[
+              { value: "weeks", label: "Life in weeks" },
+              { value: "year", label: "This year" },
+            ]}
+          />
+        </div>
+        {view === "weeks" ? (
+          <Grid total={Math.ceil(expectancy) * 52} lived={life.weeksLived} cols={52} labelEvery={10 * 52} labelStep={10} />
+        ) : (
+          <YearDays now={now} />
+        )}
+      </section>
+
+      <section className="mt-12 pb-6 text-center">
         <button onClick={() => setEditing((e) => !e)} className="text-[12px] text-faint transition-colors hover:text-fg">
           Born {fromKey(settings.birthDate).toLocaleDateString(undefined, { day: "numeric", month: "long", year: "numeric" })} ·{" "}
           {settings.lifeExpectancy ? `${settings.lifeExpectancy} years (your estimate)` : `${settings.country}, ${expectancy} years`} ·{" "}
@@ -116,22 +93,20 @@ export default function LifePage() {
               <span className="mb-1.5 block text-[11px] text-faint">Born</span>
               <Input type="date" value={settings.birthDate} onChange={(e) => e.target.value && updateSettings({ birthDate: e.target.value })} />
             </label>
-            <label className="block">
+            <div>
               <span className="mb-1.5 block text-[11px] text-faint">Country</span>
-              <select
+              <Select
+                label="Country"
                 value={settings.country}
-                onChange={(e) => updateSettings({ country: e.target.value })}
-                className="h-10 w-full rounded-lg border border-line bg-surface px-2 text-fg outline-none focus:border-line-strong"
-              >
-                {Object.keys(LIFE_EXPECTANCY)
+                onChange={(country) => updateSettings({ country })}
+                options={Object.keys(LIFE_EXPECTANCY)
                   .sort()
-                  .map((c) => (
-                    <option key={c} value={c}>
-                      {c} · {LIFE_EXPECTANCY[c]}
-                    </option>
-                  ))}
-              </select>
-            </label>
+                  .map((c) => ({ value: c, label: `${c} · ${LIFE_EXPECTANCY[c]}` }))}
+                className="h-11 w-full justify-between rounded-xl border border-line bg-surface px-3.5 text-[14px]"
+                menuClassName="w-full"
+                wide
+              />
+            </div>
             <label className="block">
               <span className="mb-1.5 block text-[11px] text-faint">Own estimate</span>
               <Input
@@ -148,98 +123,6 @@ export default function LifePage() {
         )}
       </section>
     </div>
-  );
-}
-
-const GRID_TITLE: Record<Unit, string> = {
-  days: "This year, day by day",
-  weeks: "Your life in weeks",
-  months: "Your life in months",
-  years: "Your life in years",
-};
-
-const gridNote = (unit: Unit, life: ReturnType<typeof computeLife>, yearDaysLeft: number) =>
-  unit === "days" ? `${yearDaysLeft} days left this year` : `${formatNumber(unit === "weeks" ? life.weeksLeft : unit === "months" ? life.monthsLeft : Math.floor(life.yearsLeft))} left`;
-
-function Section({ title, note, children }: { title: string; note?: string; children: React.ReactNode }) {
-  return (
-    <section className="mt-14">
-      <div className="mb-5 flex items-baseline justify-between gap-3">
-        <h2 className="text-[13px] font-medium text-muted">{title}</h2>
-        {note && <p className="text-[12px] text-faint tabular-nums">{note}</p>}
-      </div>
-      {children}
-    </section>
-  );
-}
-
-/** A small ring: the filled arc is time passed, the number is what's left. */
-function Ring({ label, passed, value, unit, accent }: { label: string; passed: number; value: number; unit: string; accent?: boolean }) {
-  const r = 26;
-  const len = 2 * Math.PI * r;
-  return (
-    <div className="flex flex-col items-center">
-      <div className="relative aspect-square w-full max-w-[72px]">
-        <svg viewBox="0 0 64 64" className="size-full -rotate-90" aria-hidden>
-          <circle cx="32" cy="32" r={r} fill="none" stroke="var(--surface-3)" strokeWidth="3.5" />
-          <circle
-            cx="32"
-            cy="32"
-            r={r}
-            fill="none"
-            stroke={accent ? "var(--crystal)" : "var(--fg)"}
-            strokeOpacity={accent ? 1 : 0.8}
-            strokeWidth="3.5"
-            strokeLinecap="round"
-            strokeDasharray={len}
-            className="animate-ring-fill"
-            style={{ ["--len" as string]: len, ["--to" as string]: len * (1 - passed), strokeDashoffset: len * (1 - passed) }}
-          />
-        </svg>
-        <p className="absolute inset-0 flex items-center justify-center text-[13px] font-semibold tabular-nums sm:text-[15px]">
-          {formatNumber(value)}
-          <span className="ml-px text-[10px] font-medium text-faint">{unit}</span>
-        </p>
-      </div>
-      <p className="mt-2 text-[11px] text-faint">{label}</p>
-    </div>
-  );
-}
-
-/** Birth to the expected end, with today and the age Alexander reached marked on it. */
-function Timeline({ age, expectancy }: { age: number; expectancy: number }) {
-  const at = (years: number) => `${Math.min(100, (years / expectancy) * 100)}%`;
-  const ticks = Array.from({ length: Math.floor(expectancy / 10) + 1 }, (_, i) => i * 10);
-  return (
-    <div className="px-1 pt-7 pb-6">
-      <div className="relative h-[3px] rounded-full bg-surface-3">
-        <div className="absolute inset-y-0 left-0 rounded-full bg-fg/80 transition-[width] duration-1000" style={{ width: at(age) }} />
-        <Marker left={at(ALEXANDER_YEARS)} label="Alexander, 32" above={false} />
-        <Marker left={at(age)} label={`You, ${Math.floor(age)}`} above accent />
-        {ticks.map((t) => (
-          <span key={t} className="absolute top-3 -translate-x-1/2 text-[10px] text-faint tabular-nums" style={{ left: at(t) }}>
-            {t}
-          </span>
-        ))}
-      </div>
-    </div>
-  );
-}
-
-function Marker({ left, label, above, accent }: { left: string; label: string; above: boolean; accent?: boolean }) {
-  return (
-    <span className="absolute top-1/2 -translate-x-1/2 -translate-y-1/2" style={{ left }}>
-      <span className={cn("block size-2.5 rounded-full ring-4 ring-bg", accent ? "bg-crystal" : "bg-muted")} />
-      <span
-        className={cn(
-          "absolute left-1/2 -translate-x-1/2 text-[11px] whitespace-nowrap",
-          above ? "bottom-5" : "top-7",
-          accent ? "text-fg" : "text-faint",
-        )}
-      >
-        {label}
-      </span>
-    </span>
   );
 }
 
@@ -280,8 +163,8 @@ function Grid({ total, lived, cols, labelEvery, labelStep, big }: { total: numbe
         </span>
       ))}
       <svg viewBox={`0 0 ${width} ${height}`} className="block h-auto w-full" role="img" aria-label={`${lived} of ${total} lived`}>
-        <path d={future} fill="var(--surface-2)" />
-        <path d={past} fill="var(--fg)" fillOpacity={0.32} />
+        <path d={past} fill="var(--surface-2)" />
+        <path d={future} fill="var(--fg)" fillOpacity={0.3} />
         {lived < total && (
           <rect x={cx} y={cy} width={cell} height={cell} rx={radius} fill="var(--crystal)">
             <animate attributeName="opacity" values="1;0.4;1" dur="2.4s" repeatCount="indefinite" />
@@ -329,8 +212,8 @@ function YearDays({ now }: { now: number }) {
         </span>
       ))}
       <svg viewBox={`0 0 ${width} ${height}`} className="block h-auto w-full" role="img" aria-label={`Day ${todayDate} of month ${todayMonth + 1}`}>
-        <path d={future} fill="var(--surface-2)" />
-        <path d={past} fill="var(--fg)" fillOpacity={0.32} />
+        <path d={past} fill="var(--surface-2)" />
+        <path d={future} fill="var(--fg)" fillOpacity={0.3} />
         <rect x={(todayDate - 1) * (cell + gap)} y={todayMonth * (tall + gap)} width={cell} height={tall} rx={2} fill="var(--crystal)">
           <animate attributeName="opacity" values="1;0.4;1" dur="2.4s" repeatCount="indefinite" />
         </rect>

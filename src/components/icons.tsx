@@ -11,8 +11,10 @@ import {
   Headphones,
   Hourglass,
   Landmark,
-  ListChecks,
-  Network,
+  Lightbulb,
+  Repeat,
+  Timer,
+  Target,
   Settings2,
   Sun,
   type LucideProps,
@@ -37,11 +39,13 @@ export const VideosIcon = thin(CirclePlay);
 export const BooksIcon = thin(BookOpen);
 export const BucketIcon = thin(Compass);
 export const LifeIcon = thin(Hourglass);
-export const TodoIcon = thin(ListChecks);
+export const GoalsIcon = thin(Target);
 export const DontIcon = thin(Ban);
 export const PodcastsIcon = thin(Headphones);
 export const PlansIcon = thin(ClipboardList);
 export const StoriesIcon = thin(Landmark);
-export const StrategyIcon = thin(Network);
+export const IdeasIcon = thin(Lightbulb);
+export const HabitsIcon = thin(Repeat);
+export const TimerIcon = thin(Timer);
 export const SettingsIcon = thin(Settings2);
 export const MoreIcon = thin(Ellipsis);
