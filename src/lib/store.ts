@@ -3,9 +3,10 @@
 import { del, get, set } from "idb-keyval";
 import { create } from "zustand";
 import { persist, type PersistStorage, type StorageValue } from "zustand/middleware";
+import { scoped } from "./account";
 import { todayKey } from "./date";
 import { deleteImages, deleteImagesLater, keepImages } from "./images";
-import type { Book, BucketItem, DayLog, Goal, Habit, HabitCheck, Idea, JournalEntry, ListItem, Mission, MyStory, Plan, Priority, Settings, StoryRead, Task, TimerSession, TimerTask, Video } from "./types";
+import type { Book, BucketItem, DayLog, Exercise, Goal, Habit, HabitCheck, Idea, Learning, Skill, WorkoutLog, WorkoutUnit, JournalEntry, ListItem, Mission, MyStory, Plan, Priority, Settings, StoryRead, Task, TimerSession, TimerTask, Video } from "./types";
 import { pct, uid } from "./utils";
 
 /*
@@ -31,26 +32,26 @@ if (typeof window !== "undefined") {
 
 const idbStorage: PersistStorage<Data> = {
   getItem: async (name) => {
-    const raw = await get<string | StorageValue<Data>>(name);
+    const raw = await get<string | StorageValue<Data>>(scoped(name));
     return raw == null ? null : typeof raw === "string" ? JSON.parse(raw) : raw;
   },
   setItem: (name, value) => {
-    pendingSave = { name, value };
+    pendingSave = { name: scoped(name), value };
     clearTimeout(saveTimer);
     saveTimer = setTimeout(flushSave, 400);
   },
   removeItem: async (name) => {
     pendingSave = null;
     clearTimeout(saveTimer);
-    await del(name);
+    await del(scoped(name));
   },
 };
 
 /** Collections whose records sync individually. Tombstone keys are `${kind}:${id}`. */
-export type Kind = "tasks" | "missions" | "goals" | "videos" | "books" | "bucket" | "donts" | "podcasts" | "plans" | "ideas" | "habits" | "habitChecks" | "timerTasks" | "timerSessions" | "myStories" | "storiesRead" | "journal";
+export type Kind = "tasks" | "missions" | "goals" | "videos" | "books" | "bucket" | "donts" | "podcasts" | "plans" | "ideas" | "habits" | "habitChecks" | "timerTasks" | "timerSessions" | "exercises" | "workoutLogs" | "skills" | "learnings" | "myStories" | "storiesRead" | "journal";
 
 /** Collections that can be reordered by dragging. */
-export type OrderedKind = "tasks" | "missions" | "goals" | "videos" | "books" | "bucket" | "donts" | "podcasts" | "plans" | "ideas" | "habits" | "timerTasks";
+export type OrderedKind = "tasks" | "missions" | "goals" | "videos" | "books" | "bucket" | "donts" | "podcasts" | "plans" | "ideas" | "habits" | "timerTasks" | "exercises" | "skills";
 
 /** The simple lists that share one shape (ListItem). */
 export type ListKind = "donts" | "podcasts";
@@ -71,6 +72,10 @@ export interface Data {
   habitChecks: HabitCheck[];
   timerTasks: TimerTask[];
   timerSessions: TimerSession[];
+  exercises: Exercise[];
+  workoutLogs: WorkoutLog[];
+  skills: Skill[];
+  learnings: Learning[];
   myStories: MyStory[];
   storiesRead: StoryRead[];
   journal: Record<string, JournalEntry>;
@@ -79,7 +84,7 @@ export interface Data {
   deleted: Record<string, number>;
 }
 
-export const DATA_KEYS = ["tasks", "days", "missions", "goals", "videos", "books", "bucket", "donts", "podcasts", "plans", "ideas", "habits", "habitChecks", "timerTasks", "timerSessions", "myStories", "storiesRead", "journal", "settings", "deleted"] as const;
+export const DATA_KEYS = ["tasks", "days", "missions", "goals", "videos", "books", "bucket", "donts", "podcasts", "plans", "ideas", "habits", "habitChecks", "timerTasks", "timerSessions", "exercises", "workoutLogs", "skills", "learnings", "myStories", "storiesRead", "journal", "settings", "deleted"] as const;
 
 const defaultSettings: Settings = {
   name: "",
@@ -104,6 +109,10 @@ const initialData: Data = {
   habitChecks: [],
   timerTasks: [],
   timerSessions: [],
+  exercises: [],
+  workoutLogs: [],
+  skills: [],
+  learnings: [],
   myStories: [],
   storiesRead: [],
   journal: {},
@@ -116,7 +125,9 @@ interface Actions {
   updateTask: (id: string, patch: Partial<Task>) => void;
   toggleTask: (id: string) => void;
   deleteTask: (id: string) => void;
+  /** Copy a day's unfinished tasks to another day. The originals stay, marked not done. */
   carryOver: (from: string, to: string) => number;
+  carryTask: (id: string, to: string) => void;
   markDayStart: (date: string) => void;
 
   /** Adds a mission; there can be at most MAX_MISSIONS. Returns its id, or null when full. */
@@ -179,6 +190,19 @@ interface Actions {
   stopTimer: (id: string) => void;
   deleteSession: (id: string) => void;
 
+  addExercise: (e: { title: string; target: number; unit: WorkoutUnit }) => string;
+  updateExercise: (id: string, patch: Partial<Exercise>) => void;
+  deleteExercise: (id: string) => void;
+  /** Add a burst to today's total. Returns the log's id (for undo). */
+  logWorkout: (exerciseId: string, amount: number) => string;
+  deleteWorkoutLog: (id: string) => void;
+
+  addSkill: (title: string) => string;
+  updateSkill: (id: string, patch: Partial<Skill>) => void;
+  deleteSkill: (id: string) => void;
+  addLearning: (skillId: string, text: string) => void;
+  deleteLearning: (id: string) => void;
+
   /** Save a new manual order: `ids` in their new sequence. */
   reorder: (kind: OrderedKind, ids: string[]) => void;
   /** Put a just-deleted record back (undo). */
@@ -231,6 +255,10 @@ export function normalize(p: Partial<Data>): Data {
     habitChecks: p.habitChecks ?? [],
     timerTasks: p.timerTasks ?? [],
     timerSessions: p.timerSessions ?? [],
+    exercises: p.exercises ?? [],
+    workoutLogs: p.workoutLogs ?? [],
+    skills: p.skills ?? [],
+    learnings: p.learnings ?? [],
     myStories: p.myStories ?? [],
     storiesRead: p.storiesRead ?? [],
     journal: p.journal ?? {},
@@ -285,17 +313,23 @@ export const useStore = create<Store>()(
           return { tasks, days: withScore(s.days, tasks, task.date), deleted: tombstone(s.deleted, "tasks", id) };
         }),
 
+      // A day's record never changes after the fact: an unfinished task stays not done on its day,
+      // and a fresh copy starts on the new day.
       carryOver: (from, to) => {
-        const pending = getState().tasks.filter((t) => t.date === from && !t.done);
-        if (!pending.length) return 0;
-        setState((s) => {
-          const ids = new Set(pending.map((t) => t.id));
-          const now = Date.now();
-          const tasks = s.tasks.map((t) => (ids.has(t.id) ? { ...t, date: to, updatedAt: now } : t));
-          return { tasks, days: withScore(withScore(s.days, tasks, from), tasks, to) };
-        });
+        const pending = getState().tasks.filter((t) => t.date === from && !t.done && !t.carriedTo);
+        pending.forEach((t) => getState().carryTask(t.id, to));
         return pending.length;
       },
+      carryTask: (id, to) =>
+        setState((s) => {
+          const task = s.tasks.find((t) => t.id === id);
+          if (!task || task.done || task.carriedTo) return s;
+          const now = Date.now();
+          const order = nextOrder(s.tasks.filter((t) => t.date === to).map((t) => ({ order: t.order ?? 0 })));
+          const copy: Task = { id: uid(), title: task.title, date: to, priority: task.priority, done: false, createdAt: now, updatedAt: now, order, ...(task.note && { note: task.note }) };
+          const tasks = [...s.tasks.map((t) => (t.id === id ? { ...t, carriedTo: to, updatedAt: now } : t)), copy];
+          return { tasks, days: withScore(s.days, tasks, to) };
+        }),
 
       markDayStart: (date) =>
         setState((s) =>
@@ -487,6 +521,46 @@ export const useStore = create<Store>()(
           const now = Date.now();
           return { timerSessions: s.timerSessions.map((x) => (x.id === id && !x.endedAt ? { ...x, endedAt: Math.min(now, x.endsAt), updatedAt: now } : x)) };
         }),
+      addExercise: ({ title, target, unit }) => {
+        const id = uid();
+        const now = Date.now();
+        setState((s) => ({ exercises: [...s.exercises, { id, title, target, unit, createdAt: now, updatedAt: now, order: nextOrder(s.exercises.map((e) => ({ order: e.order ?? 0 }))) }] }));
+        return id;
+      },
+      updateExercise: (id, patch) => setState((s) => ({ exercises: patchById(s.exercises, id, patch) })),
+      deleteExercise: (id) =>
+        setState((s) => {
+          let deleted = tombstone(s.deleted, "exercises", id);
+          for (const l of s.workoutLogs) if (l.exerciseId === id) deleted = tombstone(deleted, "workoutLogs", l.id);
+          return { exercises: s.exercises.filter((e) => e.id !== id), workoutLogs: s.workoutLogs.filter((l) => l.exerciseId !== id), deleted };
+        }),
+      logWorkout: (exerciseId, amount) => {
+        const id = uid();
+        const now = Date.now();
+        setState((s) => ({ workoutLogs: [...s.workoutLogs, { id, exerciseId, amount, date: todayKey(), createdAt: now, updatedAt: now }] }));
+        return id;
+      },
+      deleteWorkoutLog: (id) => setState((s) => ({ workoutLogs: s.workoutLogs.filter((l) => l.id !== id), deleted: tombstone(s.deleted, "workoutLogs", id) })),
+
+      addSkill: (title) => {
+        const id = uid();
+        const now = Date.now();
+        setState((s) => ({ skills: [...s.skills, { id, title, steps: [], createdAt: now, updatedAt: now, order: nextOrder(s.skills.map((k) => ({ order: k.order ?? 0 }))) }] }));
+        return id;
+      },
+      updateSkill: (id, patch) => setState((s) => ({ skills: patchById(s.skills, id, patch) })),
+      deleteSkill: (id) =>
+        setState((s) => {
+          let deleted = tombstone(s.deleted, "skills", id);
+          for (const l of s.learnings) if (l.skillId === id) deleted = tombstone(deleted, "learnings", l.id);
+          return { skills: s.skills.filter((k) => k.id !== id), learnings: s.learnings.filter((l) => l.skillId !== id), deleted };
+        }),
+      addLearning: (skillId, text) => {
+        const now = Date.now();
+        setState((s) => ({ learnings: [...s.learnings, { id: uid(), skillId, text, date: todayKey(), createdAt: now, updatedAt: now }] }));
+      },
+      deleteLearning: (id) => setState((s) => ({ learnings: s.learnings.filter((l) => l.id !== id), deleted: tombstone(s.deleted, "learnings", id) })),
+
       deleteSession: (id) => setState((s) => ({ timerSessions: s.timerSessions.filter((x) => x.id !== id), deleted: tombstone(s.deleted, "timerSessions", id) })),
 
       markStoryRead: (id) =>
@@ -554,8 +628,8 @@ export const useStore = create<Store>()(
 
 /** The persisted/synced part of the store. */
 export function pickData(s: Data): Data {
-  const { tasks, days, missions, goals, videos, books, bucket, donts, podcasts, plans, ideas, habits, habitChecks, timerTasks, timerSessions, myStories, storiesRead, journal, settings, deleted } = s;
-  return { tasks, days, missions, goals, videos, books, bucket, donts, podcasts, plans, ideas, habits, habitChecks, timerTasks, timerSessions, myStories, storiesRead, journal, settings, deleted };
+  const { tasks, days, missions, goals, videos, books, bucket, donts, podcasts, plans, ideas, habits, habitChecks, timerTasks, timerSessions, exercises, workoutLogs, skills, learnings, myStories, storiesRead, journal, settings, deleted } = s;
+  return { tasks, days, missions, goals, videos, books, bucket, donts, podcasts, plans, ideas, habits, habitChecks, timerTasks, timerSessions, exercises, workoutLogs, skills, learnings, myStories, storiesRead, journal, settings, deleted };
 }
 
 /** Every image id referenced anywhere — used for backups and photo sync. */

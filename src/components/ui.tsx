@@ -43,6 +43,7 @@ export function Button({
 export function IconButton({ className, label, ...props }: ButtonHTMLAttributes<HTMLButtonElement> & { label: string }) {
   return (
     <button
+      type="button"
       aria-label={label}
       title={label}
       className={cn(
@@ -85,6 +86,7 @@ export function Textarea({ className, ...props }: TextareaHTMLAttributes<HTMLTex
 export function Checkbox({ checked, onChange, label, size = "md" }: { checked: boolean; onChange: () => void; label: string; size?: "sm" | "md" }) {
   return (
     <button
+      type="button"
       role="checkbox"
       aria-checked={checked}
       aria-label={label}
@@ -158,6 +160,7 @@ export function Segmented<T extends string>({ value, onChange, options }: { valu
       {options.map((o) => (
         <button
           key={o.value}
+          type="button"
           onClick={() => onChange(o.value)}
           aria-pressed={value === o.value}
           className={cn("relative z-10 rounded-lg px-3.5 py-1.5 text-xs font-medium whitespace-nowrap transition-colors", value === o.value ? "text-fg" : "text-muted hover:text-fg")}

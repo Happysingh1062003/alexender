@@ -66,6 +66,33 @@ function useAutoLock() {
   }, []);
 }
 
+// Fields that bring up the on-screen keyboard (a date or a checkbox doesn't).
+const TYPING_INPUTS = new Set(["text", "search", "email", "url", "tel", "password", "number"]);
+const opensKeyboard = (el: Element | null) =>
+  !!el &&
+  (el instanceof HTMLTextAreaElement || (el instanceof HTMLInputElement && TYPING_INPUTS.has(el.type)) || (el as HTMLElement).isContentEditable);
+
+/**
+ * True while you type on a touch screen. The phone's keyboard shrinks the page, which would lift
+ * the bottom bar and the orb up over what you're writing — so they step aside until you're done.
+ */
+function useTyping() {
+  const [typing, setTyping] = useState(false);
+  useEffect(() => {
+    const touch = matchMedia("(pointer: coarse)");
+    const update = () => setTyping(touch.matches && opensKeyboard(document.activeElement));
+    // focusout fires before focus lands on the next field; check once it has settled.
+    const later = () => setTimeout(update, 0);
+    document.addEventListener("focusin", update);
+    document.addEventListener("focusout", later);
+    return () => {
+      document.removeEventListener("focusin", update);
+      document.removeEventListener("focusout", later);
+    };
+  }, []);
+  return typing;
+}
+
 export function lockNow() {
   writeUnlocked(false);
   useUI.getState().setUnlocked(false);
@@ -83,6 +110,14 @@ export function AppShell({ children }: { children: ReactNode }) {
   const syncReady = useSync((s) => s.ready);
   const markDayStart = useStore((s) => s.markDayStart);
 
+  // Installed as an app (PWA): keep the app itself on the device so it opens offline.
+  // Only on the live site — a cached development server would serve stale code.
+  useEffect(() => {
+    if (process.env.NODE_ENV === "production" && "serviceWorker" in navigator) {
+      navigator.serviceWorker.register("/sw.js", { scope: "/", updateViaCache: "none" }).catch(() => {});
+    }
+  }, []);
+
   useEffect(() => {
     const { tick } = useClock.getState();
     tick();
@@ -98,8 +133,8 @@ export function AppShell({ children }: { children: ReactNode }) {
     if (hydrated) startSync();
   }, [hydrated]);
 
-  // The sign-in page for the site password sits outside the app.
-  if (pathname === "/login") return children;
+  // Signing in, and joining from an invite link, happen outside the app.
+  if (pathname === "/login" || pathname === "/join") return children;
 
   if (status === "error") {
     return (
@@ -291,6 +326,8 @@ function TopBar() {
 function BottomNav() {
   const pathname = usePathname();
   const primary = NAV.filter((n) => MOBILE_PRIMARY.includes(n.href));
+  const typing = useTyping();
+  if (typing) return null;
 
   return (
     <>

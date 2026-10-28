@@ -12,6 +12,7 @@ import { verifyPasscode } from "@/lib/lock";
 import { useClock, useStore } from "@/lib/store";
 import { forgetReplaced, makeThisDeviceTheSource, readReplaced, resetEverywhere, syncNow, useSync, type Replaced } from "@/lib/sync";
 import { alertDialog, confirmDialog, promptDialog } from "@/components/dialog";
+import { AccountSection } from "@/components/People";
 
 function useStorageInfo() {
   const [info, setInfo] = useState<{ persisted: boolean; usage: number } | null>(null);
@@ -54,6 +55,7 @@ export default function SettingsPage() {
         <p className="mt-3 text-[12px] text-faint">Birth date and country for the Life section are set on the Life page.</p>
       </Card>
 
+      <AccountSection />
       <SyncCard />
       <Privacy />
       <YourData />
@@ -185,8 +187,8 @@ function SyncCard() {
           <p className="text-muted">
             {on
               ? storage === "cloud"
-                ? "Your data is saved in your Neon database. Open this same address on any device and sign in with your website password to see it."
-                : "Your data is saved on this computer, shared by every device that opens this same address. A different address — like your Vercel site — keeps its own separate copy."
+                ? "Only your tasks (and the Arena's daily scores) are kept in your Neon database, so they match on every device. Everything else — habits, journal, missions, photos — stays on this device. Export a backup to move it."
+                : "Your tasks are shared through this computer with every device that opens this same address. Everything else stays on each device."
               : (message ?? "Sync isn't set up on this site.")}
           </p>
           {code === "signed-out" && (
@@ -212,7 +214,7 @@ function MakeMatch() {
     <div className="mt-5 border-t border-line pt-5 text-[13px]">
       <p className="font-medium">Make every device match this one</p>
       <p className="mt-0.5 leading-relaxed text-muted">
-        Replaces the data in the cloud and on your other devices with what is on this device right now. Use it on the device that has the data you want to keep.
+        Replaces the tasks in the cloud and on your other devices with the tasks on this device right now. Use it on the device whose tasks you want to keep.
       </p>
       <Button
         size="sm"
@@ -220,8 +222,8 @@ function MakeMatch() {
         className="mt-3"
         disabled={busy}
         onClick={async () => {
-          const sure = await confirmDialog("Use this device's data everywhere?", {
-            detail: "Data on your other devices that isn't on this one will be removed.",
+          const sure = await confirmDialog("Use this device's tasks everywhere?", {
+            detail: "Tasks on your other devices that aren't on this one will be removed. Their other data stays.",
             confirmLabel: "Use this device",
           });
           if (!sure) return;
@@ -231,7 +233,7 @@ function MakeMatch() {
           setDone(ok ? "Done — your other devices will match this one the next time they open Alexander." : "Couldn't reach the cloud. Try again when you're online.");
         }}
       >
-        {busy ? "Saving…" : "Use this device's data everywhere"}
+        {busy ? "Saving…" : "Use this device's tasks everywhere"}
       </Button>
       {done && <p className="mt-2 text-[12px] text-muted">{done}</p>}
     </div>

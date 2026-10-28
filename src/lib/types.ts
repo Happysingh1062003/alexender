@@ -19,6 +19,8 @@ export interface Task {
   spentMin?: number;
   /** Optional free-form note: details, links, what "done" means. */
   note?: string;
+  /** Left unfinished and copied to this day. The task itself stays on its own day, not done. */
+  carriedTo?: string;
 }
 
 export interface DayLog {
@@ -144,6 +146,51 @@ export interface Plan {
   createdAt: number;
   updatedAt?: number;
   order: number;
+}
+
+export type WorkoutUnit = "reps" | "min" | "km" | "steps";
+
+/** An exercise with a daily target — "Push-ups, 100 a day". */
+export interface Exercise {
+  id: string;
+  title: string;
+  unit: WorkoutUnit;
+  /** How much a day counts as hit. */
+  target: number;
+  createdAt: number;
+  updatedAt?: number;
+  order?: number;
+}
+
+/** One burst of an exercise ("+20"). A day's total is the sum, so two devices never clash. */
+export interface WorkoutLog {
+  id: string;
+  exerciseId: string;
+  date: string; // YYYY-MM-DD
+  amount: number;
+  createdAt: number;
+  updatedAt?: number;
+}
+
+/** A skill you're developing: why, a plan of what to learn, and a log of what you learned. */
+export interface Skill {
+  id: string;
+  title: string;
+  why?: string;
+  steps?: PlanStep[];
+  createdAt: number;
+  updatedAt?: number;
+  order?: number;
+}
+
+/** Something learned on a day, for one skill. */
+export interface Learning {
+  id: string;
+  skillId: string;
+  text: string;
+  date: string; // YYYY-MM-DD
+  createdAt: number;
+  updatedAt?: number;
 }
 
 /** Something you do every day. */

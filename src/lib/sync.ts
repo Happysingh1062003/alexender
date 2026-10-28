@@ -2,7 +2,8 @@
 
 import { del, get, set } from "idb-keyval";
 import { create } from "zustand";
-import { clearImages, getImageBlob, getOrFetchImage } from "./images";
+import { getOrFetchImage } from "./images";
+import { cloudPart } from "./cloud";
 import { mergeData, stableStringify } from "./merge";
 import {
   allImageIds,
@@ -12,12 +13,13 @@ import {
   useStore,
   type Data,
 } from "./store";
+import { scoped } from "./account";
 import { uid } from "./utils";
 
 /*
- * Keeps this device and the server in step. Every device works from its own local copy (fast,
- * offline-friendly); this module pulls the server copy, merges record by record, and pushes the
- * result. Operations run one at a time. A "generation" id (epoch) marks resets: when another
+ * Keeps your tasks in step across devices. Every device works from its own full local copy (fast,
+ * offline-friendly); only the cloud part — tasks, day scores and your name (see cloud.ts) — goes to
+ * the server. This module pulls that, merges record by record, and pushes the result. Operations run one at a time. A "generation" id (epoch) marks resets: when another
  * device erases or imports, devices on an older generation adopt the server copy instead of
  * merging their old data back in.
  */
@@ -42,12 +44,12 @@ export const useSync = create<{
 export type Replaced = { at: number; data: Data };
 const REPLACED_KEY = "alexender-replaced";
 export const readReplaced = () =>
-  get<Replaced>(REPLACED_KEY).catch(() => undefined);
-export const forgetReplaced = () => del(REPLACED_KEY).catch(() => {});
+  get<Replaced>(scoped(REPLACED_KEY)).catch(() => undefined);
+export const forgetReplaced = () => del(scoped(REPLACED_KEY)).catch(() => {});
 
 /** Anything you made yourself — worth keeping a copy of before it's replaced. */
 const hasContent = (d: Data) =>
-  [d.tasks, d.missions, d.goals, d.videos, d.books, d.bucket, d.donts, d.podcasts, d.plans, d.ideas, d.habits, d.timerTasks, d.timerSessions, d.myStories].some((list) => list.length > 0) ||
+  [d.tasks, d.missions, d.goals, d.videos, d.books, d.bucket, d.donts, d.podcasts, d.plans, d.ideas, d.habits, d.timerTasks, d.timerSessions, d.exercises, d.skills, d.myStories].some((list) => list.length > 0) ||
   Object.keys(d.journal).length > 0;
 
 type ServerDoc = { data: Partial<Data> & { epoch?: string }; version: number };
@@ -56,34 +58,20 @@ const META_KEY = "alex-sync";
 // A request that never answers would stall every later sync and keep a new device on the
 // loading screen, so each one gives up after this long and counts as offline.
 const REQUEST_TIMEOUT_MS = 15_000;
-const UPLOADED_KEY = "alex-uploaded-images";
 // Generations started by a deliberate reset ("use this device everywhere", import, erase) carry
 // this prefix, so even a device that has never synced takes that copy instead of merging its own.
 const RESET_PREFIX = "r-";
 
 function readMeta(): { version: number; epoch?: string } {
   try {
-    return JSON.parse(localStorage.getItem(META_KEY) ?? "") ?? { version: 0 };
+    return JSON.parse(localStorage.getItem(scoped(META_KEY)) ?? "") ?? { version: 0 };
   } catch {
     return { version: 0 };
   }
 }
 const writeMeta = (meta: { version: number; epoch?: string }) => {
   try {
-    localStorage.setItem(META_KEY, JSON.stringify(meta));
-  } catch {}
-};
-
-function readUploaded(): Set<string> {
-  try {
-    return new Set(JSON.parse(localStorage.getItem(UPLOADED_KEY) ?? "[]"));
-  } catch {
-    return new Set();
-  }
-}
-const writeUploaded = (ids: Set<string>) => {
-  try {
-    localStorage.setItem(UPLOADED_KEY, JSON.stringify([...ids]));
+    localStorage.setItem(scoped(META_KEY), JSON.stringify(meta));
   } catch {}
 };
 
@@ -215,39 +203,39 @@ async function reconcile(doc: ServerDoc | null, attempt = 0): Promise<void> {
       serverEpoch !== meta.epoch &&
       (!!meta.epoch || serverEpoch.startsWith(RESET_PREFIX));
     if (resetElsewhere) {
-      merged = remote; // another device replaced everything
+      // Another device replaced the shared part (your tasks). Everything that lives only on this
+      // device stays as it is.
+      const others = Object.fromEntries(Object.entries(local.deleted).filter(([key]) => !key.startsWith("tasks:")));
+      merged = { ...local, tasks: remote.tasks, days: remote.days, deleted: { ...others, ...cloudPart(remote).deleted } };
       epoch = doc.data.epoch;
-      writeUploaded(new Set());
-      // Nothing is lost silently: keep what this device had (photos stay on the device too), so it
-      // can be downloaded from Settings. With nothing worth keeping, free the space instead.
-      if (
-        hasContent(local) &&
-        stableStringify(local) !== stableStringify(remote)
-      )
-        void set(REPLACED_KEY, {
+      // Nothing is lost silently: keep what this device had, so it can be downloaded from Settings.
+      if (hasContent(local) && stableStringify(local.tasks) !== stableStringify(remote.tasks))
+        void set(scoped(REPLACED_KEY), {
           at: Date.now(),
           data: local,
         } satisfies Replaced)
           .then(() => useSync.setState({ replacedAt: Date.now() }))
           .catch(() => {});
-      else clearImages().catch(() => {});
     } else {
-      merged = mergeData(local, remote);
+      const both = mergeData(local, remote);
+      // Settings stay on the device; a new device (no name yet) takes the name from the cloud.
+      merged = { ...both, settings: local.settings.name ? local.settings : both.settings };
       epoch = doc.data.epoch ?? epoch ?? uid();
     }
   }
 
   if (stableStringify(merged) !== stableStringify(local)) apply(merged);
 
+  // Only the cloud part (tasks) is compared and sent; the rest never leaves this device.
   const serverUpToDate =
     doc &&
     doc.data.epoch === epoch &&
-    stableStringify(normalize(doc.data)) === stableStringify(merged);
+    stableStringify(cloudPart(normalize(doc.data))) === stableStringify(cloudPart(merged));
   if (serverUpToDate) {
     writeMeta({ version: doc.version, epoch });
   } else {
     const body = JSON.stringify({
-      data: { ...merged, epoch },
+      data: { ...cloudPart(merged), epoch },
       baseVersion: doc?.version ?? 0,
     });
     let put: Response;
@@ -278,31 +266,6 @@ async function reconcile(doc: ServerDoc | null, attempt = 0): Promise<void> {
     message: undefined,
     code: undefined,
   });
-  await uploadImages(merged);
-}
-
-/** Send photos this device has that the server doesn't yet. */
-async function uploadImages(data: Data) {
-  const uploaded = readUploaded();
-  const pending = allImageIds(data).filter((id) => !uploaded.has(id));
-  for (const id of pending) {
-    const blob = await getImageBlob(id);
-    if (blob) {
-      try {
-        const res = await fetch(`/api/images?id=${encodeURIComponent(id)}`, {
-          method: "PUT",
-          headers: { "Content-Type": blob.type || "application/octet-stream" },
-          body: blob,
-        });
-        if (!res.ok) continue;
-      } catch {
-        return; // offline — try again on the next sync
-      }
-    }
-    // Uploaded now, or it came from another device and the server already has it.
-    uploaded.add(id);
-    writeUploaded(uploaded);
-  }
 }
 
 /**
@@ -315,7 +278,6 @@ export async function resetEverywhere(data: Partial<Data>) {
   if (useSync.getState().status !== "off")
     for (const id of allImageIds(fresh)) await getOrFetchImage(id);
   apply(fresh);
-  writeUploaded(new Set());
   if (useSync.getState().status === "off") return true;
   await chain;
   const epoch = RESET_PREFIX + uid();
@@ -323,13 +285,12 @@ export async function resetEverywhere(data: Partial<Data>) {
     const res = await fetch("/api/sync?reset=1", {
       method: "PUT",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ data: { ...fresh, epoch } }),
+      body: JSON.stringify({ data: { ...cloudPart(fresh), epoch } }),
     });
     if (!res.ok) return false;
     const { version } = (await res.json()) as { version: number };
     writeMeta({ version, epoch });
     useSync.setState({ status: "synced", lastSynced: Date.now() });
-    await uploadImages(fresh);
     return true;
   } catch {
     return false;

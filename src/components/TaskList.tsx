@@ -156,7 +156,7 @@ function TaskRow({
             <button
               onClick={startEditing}
               className={cn(
-                "truncate py-3 text-left text-[15px] transition-[color] duration-300",
+                "min-w-0 py-3 text-left text-[15px] leading-snug break-words transition-[color] duration-300",
                 task.done
                   ? "text-faint line-through decoration-faint/70"
                   : "text-fg",

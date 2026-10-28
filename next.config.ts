@@ -12,6 +12,15 @@ const nextConfig: NextConfig = {
     return [
       { source: "/stories/:path*", headers: cache },
       { source: "/alexander.webp", headers: cache },
+      { source: "/icons/:path*", headers: cache },
+      // The service worker itself is always fetched fresh, so app updates arrive straight away.
+      {
+        source: "/sw.js",
+        headers: [
+          { key: "Cache-Control", value: "no-cache, no-store, must-revalidate" },
+          { key: "Content-Security-Policy", value: "default-src 'self'; script-src 'self'" },
+        ],
+      },
     ];
   },
   // Open the dev server from your phone on the same Wi-Fi (e.g. http://10.165.6.170:3000).

@@ -12,6 +12,9 @@ import {
   Hourglass,
   Landmark,
   Lightbulb,
+  Dumbbell,
+  Sprout,
+  Swords,
   Repeat,
   Timer,
   Target,
@@ -47,5 +50,8 @@ export const StoriesIcon = thin(Landmark);
 export const IdeasIcon = thin(Lightbulb);
 export const HabitsIcon = thin(Repeat);
 export const TimerIcon = thin(Timer);
+export const WorkoutIcon = thin(Dumbbell);
+export const SkillsIcon = thin(Sprout);
+export const ArenaIcon = thin(Swords);
 export const SettingsIcon = thin(Settings2);
 export const MoreIcon = thin(Ellipsis);

@@ -59,7 +59,6 @@ export default function MissionPage() {
         )}
       </SortableList>
 
-      {full && <p className="mt-6 text-[12px] text-faint">Three missions is the limit — focus is the point. Delete one to make room.</p>}
 
       <Modal open={adding} onClose={() => setAdding(false)} title="New mission">
         {adding && (

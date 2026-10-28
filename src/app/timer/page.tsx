@@ -189,7 +189,7 @@ function Today({ sessions, today, now }: { sessions: TimerSession[]; today: stri
         {totals.map((t) => (
           <li key={t.title}>
             <div className="mb-1.5 flex justify-between text-[14px]">
-              <span className="truncate">{t.title}</span>
+              <span className="min-w-0 break-words">{t.title}</span>
               <span className="text-muted tabular-nums">{formatMinutes(t.minutes)}</span>
             </div>
             <ProgressBar value={sum ? (t.minutes / sum) * 100 : 0} />
@@ -203,7 +203,7 @@ function Today({ sessions, today, now }: { sessions: TimerSession[]; today: stri
             <span className="w-32 shrink-0">
               {clockTime(s.startedAt)} – {s.endedAt || now >= s.endsAt ? clockTime(s.endedAt ?? s.endsAt) : "now"}
             </span>
-            <span className="min-w-0 flex-1 truncate text-muted">{s.title}</span>
+            <span className="min-w-0 flex-1 break-words text-muted">{s.title}</span>
             <span>{formatMinutes(sessionMinutes(s, now))}</span>
             <button
               aria-label="Delete this session"
@@ -242,7 +242,7 @@ function LastWeek({ sessions, today, now }: { sessions: TimerSession[]; today: s
               <div className="h-full rounded-full bg-fg/60" style={{ width: `${(r.sum / max) * 100}%` }} />
             </div>
             {r.totals.length > 0 && (
-              <p className="mt-1.5 truncate text-[12px] text-faint">{r.totals.map((t) => `${t.title} ${formatMinutes(t.minutes)}`).join(" · ")}</p>
+              <p className="mt-1.5 text-[12px] leading-relaxed text-faint">{r.totals.map((t) => `${t.title} ${formatMinutes(t.minutes)}`).join(" · ")}</p>
             )}
           </li>
         ))}

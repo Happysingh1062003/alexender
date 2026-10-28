@@ -91,8 +91,8 @@ export default function PlansPage() {
               <li key={step.id} className="flex min-h-10 items-center gap-3">
                 <DueChip due={step.due!} today={today} />
                 <button onClick={() => setOpen(plan.id)} className="min-w-0 flex-1 text-left">
-                  <span className="block truncate text-[14px]">{step.text}</span>
-                  <span className="block truncate text-[11.5px] text-faint">{plan.title}</span>
+                  <span className="block text-[14px] leading-snug break-words">{step.text}</span>
+                  <span className="block text-[11.5px] break-words text-faint">{plan.title}</span>
                 </button>
                 <IconButton
                   label="Add to Today"
@@ -164,7 +164,7 @@ function PlanCard({ plan, today, onOpen }: { plan: Plan; today: string; onOpen: 
       <span aria-hidden className="w-1 shrink-0 rounded-full" style={{ background: PRIORITY_COLOR[priorityOf(plan)] }} />
       <span className="min-w-0 flex-1">
         <span className="flex items-center gap-2">
-          <span className={cn("min-w-0 flex-1 truncate text-[17px] font-semibold tracking-tight", status === "done" && "text-faint line-through decoration-1")}>{plan.title}</span>
+          <span className={cn("min-w-0 flex-1 text-[17px] leading-snug font-semibold tracking-tight break-words", status === "done" && "text-faint line-through decoration-1")}>{plan.title}</span>
           <span className={cn("shrink-0 rounded-full px-2 py-0.5 text-[11px]", status === "doing" ? "bg-crystal-soft text-crystal" : "bg-surface-2 text-faint")}>
             {STATUSES.find((s) => s.value === status)?.label}
           </span>
@@ -183,7 +183,7 @@ function PlanCard({ plan, today, onOpen }: { plan: Plan; today: string; onOpen: 
           )}
           {plan.deadline && status !== "done" && <DeadlineText deadline={plan.deadline} today={today} />}
         </span>
-        {p.next && status !== "done" && <span className="mt-2 block truncate text-[12.5px] text-muted">Next: {p.next.text}</span>}
+        {p.next && status !== "done" && <span className="mt-2 line-clamp-2 block text-[12.5px] text-muted">Next: {p.next.text}</span>}
       </span>
       <ChevronRight className="mt-1 size-4 shrink-0 self-start text-faint" />
     </button>

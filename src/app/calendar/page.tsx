@@ -1,6 +1,6 @@
 "use client";
 
-import { ChevronLeft, ChevronRight } from "lucide-react";
+import { Check, ChevronLeft, ChevronRight, X } from "lucide-react";
 import {
   useCallback,
   useEffect,
@@ -34,6 +34,35 @@ const longDate = (key: string) =>
     day: "numeric",
     month: "short",
   });
+
+/** The chosen day's tasks: done, or — once the day is over — not done. */
+function DayTasks({ date, today }: { date: string; today: string }) {
+  const all = useStore((s) => s.tasks);
+  const tasks = useMemo(() => all.filter((t) => t.date === date).sort((a, b) => Number(b.done) - Number(a.done) || (a.order ?? 0) - (b.order ?? 0)), [all, date]);
+  if (!tasks.length) return null;
+  const over = date < today;
+  return (
+    <ul key={date} className="animate-fade mx-auto mt-3 max-w-md space-y-0.5 px-1">
+      {tasks.map((t) => (
+        <li key={t.id} className="flex items-start gap-3 py-1.5 text-[13.5px] leading-snug">
+          {t.done ? (
+            <span className="mt-0.5 flex size-4 shrink-0 items-center justify-center rounded-full bg-fg text-bg">
+              <Check className="size-2.5" strokeWidth={3.5} />
+            </span>
+          ) : over ? (
+            <span className="mt-0.5 flex size-4 shrink-0 items-center justify-center rounded-full bg-danger/15 text-danger">
+              <X className="size-2.5" strokeWidth={3.5} />
+            </span>
+          ) : (
+            <span className="mt-0.5 size-4 shrink-0 rounded-full border-[1.5px] border-faint" />
+          )}
+          <span className={cn("min-w-0 flex-1 break-words", t.done ? "text-muted" : over ? "text-faint" : "")}>{t.title}</span>
+          {!t.done && over && <span className="shrink-0 text-[11px] text-danger/80">{t.carriedTo ? "Not done · moved" : "Not done"}</span>}
+        </li>
+      ))}
+    </ul>
+  );
+}
 
 export default function CalendarPage() {
   const today = useClock((s) => s.today);
@@ -415,6 +444,7 @@ export default function CalendarPage() {
             )}
           </div>
         </div>
+        <DayTasks date={selected} today={today} />
       </div>
 
       <div
