@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { AsciiStatue } from "@/components/AsciiStatue";
 import { Statue } from "@/components/brand";
 import { TaskList } from "@/components/TaskList";
 import { AnimatedNumber, SectionTop, Segmented, toast } from "@/components/ui";
@@ -47,6 +48,8 @@ export default function TodayPage() {
   const addTask = useStore((s) => s.addTask);
   const [day, setDay] = useState<Day>("today");
   const burst = useDayWon(today, threshold);
+  const ascii = useStore((s) => s.settings.statueStyle === "ascii");
+  const updateSettings = useStore((s) => s.updateSettings);
 
   const date = day === "today" ? today : addDays(today, 1);
   const log = days[date];
@@ -88,7 +91,24 @@ export default function TodayPage() {
         <header className="mx-auto mb-10 flex max-w-sm items-center gap-5 sm:gap-7">
           {/* Alexander, every day — small, beside the numbers, never over them. */}
           <div className="relative shrink-0">
-            <Statue priority className={cn("h-[132px] w-auto sm:h-[150px]", pct >= 100 && "statue-glow")} />
+            {/* Tap the statue to switch between the photo and the statue drawn in characters. */}
+            <button
+              type="button"
+              aria-label={ascii ? "Show the statue as a photo" : "Show the statue in characters"}
+              onClick={() => {
+                tap(8);
+                updateSettings({ statueStyle: ascii ? "photo" : "ascii" });
+              }}
+              className={cn("block transition-transform active:scale-[0.97]", pct >= 100 && "statue-glow")}
+            >
+              {ascii ? (
+                <span className="flex min-h-[132px] items-center sm:min-h-[150px]">
+                  <AsciiStatue size={4.5} />
+                </span>
+              ) : (
+                <Statue priority className="h-[132px] w-auto sm:h-[150px]" />
+              )}
+            </button>
             {burst > 0 && (
               <div key={burst} aria-hidden className="burst pointer-events-none absolute inset-0">
                 {SPARKS.map((a) => (

@@ -70,7 +70,7 @@ A journal that fits above the keyboard, true stories of courage, and your life c
 
 ## The map
 
-Twenty sections, in four families. On a phone the four you use most sit in the bottom bar; a glowing crystal orb above it opens all the rest. While you type, the bar and the orb step aside.
+Twenty-two sections, in four families. On a phone the four you use most sit in the bottom bar; a glowing crystal orb above it opens all the rest. While you type, the bar and the orb step aside.
 
 ```mermaid
 mindmap
@@ -86,6 +86,8 @@ mindmap
       Mission
       Goals
       Skills
+      Learning
+      Questions
       Planning
       Ideas
     Learn
@@ -130,13 +132,13 @@ journey
 <table>
 <tr><th align="left">Section</th><th align="left">What it is for</th><th align="left">The detail that matters</th></tr>
 
-<tr><td><b>Today</b></td><td>Your tasks, beside a small marble head of Alexander and today's completion %.</td><td>A day is <b>won</b> at 70% (your choice). Tick a task ✓ done, or mark it ✕ <b>not done</b>. A task ends with its day: anything still open when the day is over counts as not done, and nothing slides into tomorrow.</td></tr>
+<tr><td><b>Today</b></td><td>Your tasks, beside a small marble head of Alexander and today's completion %. Tap the statue to see it drawn in ASCII characters.</td><td>A day is <b>won</b> at 70% (your choice). Tick a task ✓ done, or mark it ✕ <b>not done</b>. A task ends with its day: anything still open when the day is over counts as not done, and nothing slides into tomorrow.</td></tr>
 
 <tr><td><b>Habits</b></td><td>Things you do every day.</td><td>Only today can be ticked. A day left unticked stays <b>not done</b> — forever. Streaks, best streak, done rate, six months at a glance.</td></tr>
 
 <tr><td><b>Workout</b></td><td>Exercises with a daily target.</td><td>Type <code>Push-ups 100</code>, <code>Run 5 km</code> or <code>Plank 10 min</code>; log bursts (+10, +20, any number) as you go. Hit or missed, every day; streaks and the last 30 days.</td></tr>
 
-<tr><td><b>Timer</b></td><td>Time a task until a chosen end.</td><td>15 m to 1 h 30 m, or <i>until</i> a clock time. Ends with a soft chime on any page; the countdown shows in the tab title. Shows time per task, per day.</td></tr>
+<tr><td><b>Timer</b></td><td>Time a task — to a chosen end, or until you stop.</td><td><i>When I stop</i> counts up until you're done; or 15 m to 1 h 30 m, or <i>until</i> a clock time. Ends with a soft chime on any page; the countdown shows in the tab title. Shows time per task, per day.</td></tr>
 
 <tr><td><b>Calendar</b></td><td>How your days really went.</td><td>Average, days won, streak and focus time over 7 / 30 / 90 days; scrub the charts with a finger; a six-month heatmap; any day's tasks marked ✓ done or ✕ not done.</td></tr>
 
@@ -145,6 +147,10 @@ journey
 <tr><td><b>Mission</b></td><td>At most <b>three</b> missions for life.</td><td>Each has a title, description and icon. Opening one shows its vision first — your images, whole, one below another — then the plan.</td></tr>
 
 <tr><td><b>Skills</b></td><td>What you're growing into.</td><td>A plan of what to learn, and one line a day of what you learned. Ticking a planned step from the log is what moves the progress.</td></tr>
+
+<tr><td><b>Learning</b></td><td>One line a day of what you learned.</td><td>From anywhere — with where it came from, and a skill if it belongs to one. Search it all; an older learning comes back each day as <i>Remember this?</i></td></tr>
+
+<tr><td><b>Questions</b></td><td>Your doubts, until you find the answers.</td><td>Each topic gets its own soft colour. Write the answer when you find it, and mark it answered.</td></tr>
 
 <tr><td><b>Goals</b></td><td>Concrete targets with a deadline.</td><td>Days left, a vision, a plan, and <i>Mark achieved</i>.</td></tr>
 

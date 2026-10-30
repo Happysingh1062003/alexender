@@ -11,11 +11,16 @@ import type { TimerSession } from "@/lib/types";
 import { cn, formatMinutes } from "@/lib/utils";
 
 const PRESETS = [15, 25, 45, 60, 90];
+const SAFETY_STOP = 24 * 3_600_000; // a forgotten stopwatch stops itself after a day
 
-/** Start timing now. "Until" wins when set: today at that time, or tomorrow if it has passed. */
-function begin(title: string, minutes: number, until: string) {
+/**
+ * Start timing now. With no end it counts up until you stop it. "Until" wins when set: today at
+ * that time, or tomorrow if it has passed.
+ */
+function begin(title: string, minutes: number, until: string, open: boolean) {
   const { addTimerTask, startTimer } = useStore.getState();
   const start = Date.now();
+  if (open) return startTimer(addTimerTask(title), start + SAFETY_STOP, true);
   let end = start + minutes * 60_000;
   if (until) {
     const [h, m] = until.split(":").map(Number);
@@ -67,6 +72,9 @@ function Running({ session, now }: { session: TimerSession; now: number }) {
   const stopTimer = useStore((s) => s.stopTimer);
   const total = session.endsAt - session.startedAt;
   const left = session.endsAt - now;
+  const elapsed = now - session.startedAt;
+  // Counting up: the ring fills once a minute, like a second hand — a quiet sign it's running.
+  const ring = session.open ? ((elapsed % 60_000) / 60_000) * 100 : Math.max(0, Math.min(100, (left / total) * 100));
   return (
     <section className="animate-fade text-center">
       {/* The ring empties as time runs out; it breathes slowly while you work. */}
@@ -83,21 +91,21 @@ function Running({ session, now }: { session: TimerSession; now: number }) {
             strokeLinecap="round"
             pathLength={100}
             strokeDasharray="100"
-            strokeDashoffset={100 - Math.max(0, Math.min(100, (left / total) * 100))}
-            className="breathe transition-[stroke-dashoffset] duration-1000 ease-linear"
+            strokeDashoffset={100 - ring}
+            className={cn("breathe ease-linear", (!session.open || ring > 2) && "transition-[stroke-dashoffset] duration-1000")}
           />
         </svg>
         <div className="absolute inset-0 flex flex-col items-center justify-center px-6">
           <p className="max-w-full truncate text-[13px] text-muted">{session.title}</p>
-          <p className="mt-1 text-[52px] leading-none font-semibold tracking-[-0.04em] tabular-nums sm:text-[60px]">{formatClock(left)}</p>
-          <p className="mt-2 text-[12px] text-faint tabular-nums">ends {clockTime(session.endsAt)}</p>
+          <p className="mt-1 text-[52px] leading-none font-semibold tracking-[-0.04em] tabular-nums sm:text-[60px]">{formatClock(session.open ? elapsed : left)}</p>
+          <p className="mt-2 text-[12px] text-faint tabular-nums">{session.open ? `since ${clockTime(session.startedAt)}` : `ends ${clockTime(session.endsAt)}`}</p>
         </div>
       </div>
       <button
         onClick={() => stopTimer(session.id)}
         className="mt-8 inline-flex h-11 items-center gap-2 rounded-full border border-line-strong px-6 text-[14px] font-medium text-muted transition-colors hover:border-faint hover:text-fg active:scale-95"
       >
-        <Square className="size-3.5" fill="currentColor" /> Stop
+        <Square className="size-3.5" fill="currentColor" /> {session.open ? "Stop — I'm done" : "Stop"}
       </button>
     </section>
   );
@@ -109,16 +117,22 @@ function StartForm() {
   const [title, setTitle] = useState("");
   const [minutes, setMinutes] = useState<number | null>(25);
   const [until, setUntil] = useState("");
+  const [open, setOpen] = useState(false);
   const list = useMemo(() => [...tasks].sort(byOrder), [tasks]);
 
-  const ready = title.trim() && (until || minutes);
+  const ready = title.trim() && (open || until || minutes);
+  const pick = (m: number | null, isOpen: boolean) => {
+    setMinutes(m);
+    setOpen(isOpen);
+    setUntil("");
+  };
 
   return (
     <form
       onSubmit={(e) => {
         e.preventDefault();
         if (!ready) return;
-        begin(title.trim(), minutes ?? 25, until);
+        begin(title.trim(), minutes ?? 25, until, open);
       }}
       className="animate-fade"
     >
@@ -155,20 +169,26 @@ function StartForm() {
         </div>
       )}
 
-      <p className="mt-7 mb-2 text-[12px] text-faint">Ends after</p>
+      <p className="mt-7 mb-2 text-[12px] text-faint">Ends</p>
       <div className="flex flex-wrap items-center gap-1.5">
+        {/* No end: count up, and stop when you're done. */}
+        <button
+          type="button"
+          onClick={() => pick(null, true)}
+          aria-pressed={open}
+          className={cn("h-9 rounded-full px-3.5 text-[13px] font-medium transition-colors", open ? "bg-surface-3 text-fg" : "text-muted hover:text-fg")}
+        >
+          When I stop
+        </button>
         {PRESETS.map((m) => (
           <button
             key={m}
             type="button"
-            onClick={() => {
-              setMinutes(m);
-              setUntil("");
-            }}
-            aria-pressed={!until && minutes === m}
+            onClick={() => pick(m, false)}
+            aria-pressed={!open && !until && minutes === m}
             className={cn(
               "h-9 rounded-full px-3.5 text-[13px] font-medium tabular-nums transition-colors",
-              !until && minutes === m ? "bg-surface-3 text-fg" : "text-muted hover:text-fg",
+              !open && !until && minutes === m ? "bg-surface-3 text-fg" : "text-muted hover:text-fg",
             )}
           >
             {m < 60 ? `${m}m` : formatMinutes(m)}
@@ -176,9 +196,19 @@ function StartForm() {
         ))}
         <label className={cn("ml-1 inline-flex h-9 items-center gap-2 rounded-full border px-3 text-[13px]", until ? "border-crystal/60 text-fg" : "border-line text-muted")}>
           Until
-          <input type="time" value={until} onChange={(e) => setUntil(e.target.value)} aria-label="End at" className="h-full bg-transparent text-[13px] text-fg outline-none [color-scheme:dark]" />
+          <input
+            type="time"
+            value={until}
+            onChange={(e) => {
+              setUntil(e.target.value);
+              if (e.target.value) setOpen(false);
+            }}
+            aria-label="End at"
+            className="h-full bg-transparent text-[13px] text-fg outline-none [color-scheme:dark]"
+          />
         </label>
       </div>
+      <p className="mt-2 h-4 text-[11.5px] text-faint">{open ? "Counts up from zero — tap Stop when you're done." : ""}</p>
 
       <button
         type="submit"

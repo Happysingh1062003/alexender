@@ -185,11 +185,14 @@ export interface Skill {
   order?: number;
 }
 
-/** Something learned on a day, for one skill. */
+/** Something learned on a day — on its own, or for one of your skills. */
 export interface Learning {
   id: string;
-  skillId: string;
+  /** The skill it belongs to, if any. */
+  skillId?: string;
   text: string;
+  /** Where it came from: a book, a person, a video… */
+  source?: string;
   date: string; // YYYY-MM-DD
   createdAt: number;
   updatedAt?: number;
@@ -237,6 +240,21 @@ export interface TimerSession {
   endsAt: number;
   /** When it actually ended — on time, or stopped early. */
   endedAt?: number;
+  /** Started with no end: it counts up until you stop it (`endsAt` is only a 24-hour safety stop). */
+  open?: boolean;
+  createdAt: number;
+  updatedAt?: number;
+}
+
+/** A doubt or question you have — until you find the answer. */
+export interface Question {
+  id: string;
+  text: string;
+  /** What it's about — gives the question its colour. */
+  topic?: string;
+  answer?: string;
+  answered: boolean;
+  answeredAt?: number;
   createdAt: number;
   updatedAt?: number;
 }
@@ -305,6 +323,8 @@ export interface Settings {
   country: string;
   /** Overrides the country average when set. */
   lifeExpectancy?: number;
+  /** How the statue on Today is drawn: the photo, or in characters. */
+  statueStyle?: "photo" | "ascii";
   /** Which picture of time the Life section shows. */
   lifeView?: string;
   /** Device passcode, stored only as a salted hash. */

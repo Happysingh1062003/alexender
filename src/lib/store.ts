@@ -6,7 +6,7 @@ import { persist, type PersistStorage, type StorageValue } from "zustand/middlew
 import { scoped } from "./account";
 import { todayKey } from "./date";
 import { deleteImages, deleteImagesLater, keepImages } from "./images";
-import type { Book, BucketItem, DayLog, Exercise, Goal, Habit, HabitCheck, Idea, Learning, Skill, WorkoutLog, WorkoutUnit, JournalEntry, ListItem, Mission, MyStory, Plan, Priority, Settings, StoryRead, Task, TimerSession, TimerTask, Video } from "./types";
+import type { Book, BucketItem, DayLog, Exercise, Goal, Habit, HabitCheck, Idea, Question, Learning, Skill, WorkoutLog, WorkoutUnit, JournalEntry, ListItem, Mission, MyStory, Plan, Priority, Settings, StoryRead, Task, TimerSession, TimerTask, Video } from "./types";
 import { pct, uid } from "./utils";
 
 /*
@@ -48,10 +48,10 @@ const idbStorage: PersistStorage<Data> = {
 };
 
 /** Collections whose records sync individually. Tombstone keys are `${kind}:${id}`. */
-export type Kind = "tasks" | "missions" | "goals" | "videos" | "books" | "bucket" | "donts" | "podcasts" | "plans" | "ideas" | "habits" | "habitChecks" | "timerTasks" | "timerSessions" | "exercises" | "workoutLogs" | "skills" | "learnings" | "myStories" | "storiesRead" | "journal";
+export type Kind = "tasks" | "missions" | "goals" | "videos" | "books" | "bucket" | "donts" | "podcasts" | "plans" | "ideas" | "habits" | "habitChecks" | "timerTasks" | "timerSessions" | "exercises" | "workoutLogs" | "skills" | "learnings" | "questions" | "myStories" | "storiesRead" | "journal";
 
 /** Collections that can be reordered by dragging. */
-export type OrderedKind = "tasks" | "missions" | "goals" | "videos" | "books" | "bucket" | "donts" | "podcasts" | "plans" | "ideas" | "habits" | "timerTasks" | "exercises" | "skills";
+export type OrderedKind = "tasks" | "missions" | "goals" | "videos" | "books" | "bucket" | "donts" | "podcasts" | "plans" | "ideas" | "habits" | "timerTasks" | "exercises" | "skills" | "learnings" | "questions";
 
 /** The simple lists that share one shape (ListItem). */
 export type ListKind = "donts" | "podcasts";
@@ -76,6 +76,7 @@ export interface Data {
   workoutLogs: WorkoutLog[];
   skills: Skill[];
   learnings: Learning[];
+  questions: Question[];
   myStories: MyStory[];
   storiesRead: StoryRead[];
   journal: Record<string, JournalEntry>;
@@ -84,7 +85,7 @@ export interface Data {
   deleted: Record<string, number>;
 }
 
-export const DATA_KEYS = ["tasks", "days", "missions", "goals", "videos", "books", "bucket", "donts", "podcasts", "plans", "ideas", "habits", "habitChecks", "timerTasks", "timerSessions", "exercises", "workoutLogs", "skills", "learnings", "myStories", "storiesRead", "journal", "settings", "deleted"] as const;
+export const DATA_KEYS = ["tasks", "days", "missions", "goals", "videos", "books", "bucket", "donts", "podcasts", "plans", "ideas", "habits", "habitChecks", "timerTasks", "timerSessions", "exercises", "workoutLogs", "skills", "learnings", "questions", "myStories", "storiesRead", "journal", "settings", "deleted"] as const;
 
 const defaultSettings: Settings = {
   name: "",
@@ -113,6 +114,7 @@ const initialData: Data = {
   workoutLogs: [],
   skills: [],
   learnings: [],
+  questions: [],
   myStories: [],
   storiesRead: [],
   journal: {},
@@ -187,7 +189,7 @@ interface Actions {
   addTimerTask: (title: string) => string;
   deleteTimerTask: (id: string) => void;
   /** Start timing a task until `endsAt`; any running timer stops first. */
-  startTimer: (taskId: string, endsAt: number) => void;
+  startTimer: (taskId: string, endsAt: number, open?: boolean) => void;
   /** End a session now (or at its planned end, if that has passed). */
   stopTimer: (id: string) => void;
   deleteSession: (id: string) => void;
@@ -202,8 +204,12 @@ interface Actions {
   addSkill: (title: string) => string;
   updateSkill: (id: string, patch: Partial<Skill>) => void;
   deleteSkill: (id: string) => void;
-  addLearning: (skillId: string, text: string) => void;
+  addLearning: (skillId: string | undefined, text: string, source?: string) => void;
   deleteLearning: (id: string) => void;
+
+  addQuestion: (text: string, topic?: string) => string;
+  updateQuestion: (id: string, patch: Partial<Question>) => void;
+  deleteQuestion: (id: string) => void;
 
   /** Save a new manual order: `ids` in their new sequence. */
   reorder: (kind: OrderedKind, ids: string[]) => void;
@@ -261,6 +267,7 @@ export function normalize(p: Partial<Data>): Data {
     workoutLogs: p.workoutLogs ?? [],
     skills: p.skills ?? [],
     learnings: p.learnings ?? [],
+    questions: p.questions ?? [],
     myStories: p.myStories ?? [],
     storiesRead: p.storiesRead ?? [],
     journal: p.journal ?? {},
@@ -516,14 +523,14 @@ export const useStore = create<Store>()(
         return id;
       },
       deleteTimerTask: (id) => setState((s) => ({ timerTasks: s.timerTasks.filter((t) => t.id !== id), deleted: tombstone(s.deleted, "timerTasks", id) })),
-      startTimer: (taskId, endsAt) =>
+      startTimer: (taskId, endsAt, open) =>
         setState((s) => {
           const task = s.timerTasks.find((t) => t.id === taskId);
           if (!task) return s;
           const now = Date.now();
           const sessions = s.timerSessions.map((x) => (x.endedAt ? x : { ...x, endedAt: Math.min(now, x.endsAt), updatedAt: now }));
           return {
-            timerSessions: [...sessions, { id: uid(), taskId, title: task.title, date: todayKey(), startedAt: now, endsAt, createdAt: now, updatedAt: now }],
+            timerSessions: [...sessions, { id: uid(), taskId, title: task.title, date: todayKey(), startedAt: now, endsAt, createdAt: now, updatedAt: now, ...(open && { open: true }) }],
           };
         }),
       stopTimer: (id) =>
@@ -565,10 +572,21 @@ export const useStore = create<Store>()(
           for (const l of s.learnings) if (l.skillId === id) deleted = tombstone(deleted, "learnings", l.id);
           return { skills: s.skills.filter((k) => k.id !== id), learnings: s.learnings.filter((l) => l.skillId !== id), deleted };
         }),
-      addLearning: (skillId, text) => {
+      addLearning: (skillId, text, source) => {
         const now = Date.now();
-        setState((s) => ({ learnings: [...s.learnings, { id: uid(), skillId, text, date: todayKey(), createdAt: now, updatedAt: now }] }));
+        setState((s) => ({
+          learnings: [...s.learnings, { id: uid(), text, date: todayKey(), createdAt: now, updatedAt: now, ...(skillId && { skillId }), ...(source?.trim() && { source: source.trim() }) }],
+        }));
       },
+      addQuestion: (text, topic) => {
+        const id = uid();
+        const now = Date.now();
+        setState((s) => ({ questions: [...s.questions, { id, text, answered: false, createdAt: now, updatedAt: now, ...(topic?.trim() && { topic: topic.trim() }) }] }));
+        return id;
+      },
+      updateQuestion: (id, patch) => setState((s) => ({ questions: patchById(s.questions, id, patch) })),
+      deleteQuestion: (id) => setState((s) => ({ questions: s.questions.filter((q) => q.id !== id), deleted: tombstone(s.deleted, "questions", id) })),
+
       deleteLearning: (id) => setState((s) => ({ learnings: s.learnings.filter((l) => l.id !== id), deleted: tombstone(s.deleted, "learnings", id) })),
 
       deleteSession: (id) => setState((s) => ({ timerSessions: s.timerSessions.filter((x) => x.id !== id), deleted: tombstone(s.deleted, "timerSessions", id) })),
@@ -638,8 +656,8 @@ export const useStore = create<Store>()(
 
 /** The persisted/synced part of the store. */
 export function pickData(s: Data): Data {
-  const { tasks, days, missions, goals, videos, books, bucket, donts, podcasts, plans, ideas, habits, habitChecks, timerTasks, timerSessions, exercises, workoutLogs, skills, learnings, myStories, storiesRead, journal, settings, deleted } = s;
-  return { tasks, days, missions, goals, videos, books, bucket, donts, podcasts, plans, ideas, habits, habitChecks, timerTasks, timerSessions, exercises, workoutLogs, skills, learnings, myStories, storiesRead, journal, settings, deleted };
+  const { tasks, days, missions, goals, videos, books, bucket, donts, podcasts, plans, ideas, habits, habitChecks, timerTasks, timerSessions, exercises, workoutLogs, skills, learnings, questions, myStories, storiesRead, journal, settings, deleted } = s;
+  return { tasks, days, missions, goals, videos, books, bucket, donts, podcasts, plans, ideas, habits, habitChecks, timerTasks, timerSessions, exercises, workoutLogs, skills, learnings, questions, myStories, storiesRead, journal, settings, deleted };
 }
 
 /** Every image id referenced anywhere — used for backups and photo sync. */

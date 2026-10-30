@@ -36,6 +36,7 @@ export function TimerWatcher() {
     if (!open) return;
     const finish = (whileAway: boolean) => {
       useStore.getState().stopTimer(open.id);
+      if (open.open) return toast(`${open.title} stopped after 24 hours`);
       if (whileAway) return;
       chime();
       navigator.vibrate?.([180, 90, 180]);
@@ -47,7 +48,7 @@ export function TimerWatcher() {
       return;
     }
     const title = document.title;
-    const show = () => (document.title = `${formatClock(open.endsAt - Date.now())} · ${open.title}`);
+    const show = () => (document.title = `${formatClock(open.open ? Date.now() - open.startedAt : open.endsAt - Date.now())} · ${open.title}`);
     show();
     const tick = setInterval(show, 1000);
     const done = setTimeout(() => finish(false), wait);

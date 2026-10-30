@@ -12,6 +12,7 @@ import { startSync, useSync } from "@/lib/sync";
 import { useBackToClose } from "@/lib/useBackToClose";
 import { cn } from "@/lib/utils";
 import { LockScreen } from "./Lock";
+import { AsciiStatue } from "./AsciiStatue";
 import { Logo } from "./Logo";
 import { Onboarding } from "./Onboarding";
 import { Toaster } from "./ui";
@@ -161,7 +162,7 @@ export function AppShell({ children }: { children: ReactNode }) {
   if (!hydrated || !today || (!name && !syncReady)) {
     return (
       <div className="flex min-h-dvh items-center justify-center">
-        <Logo className="size-9 animate-[spin_8s_linear_infinite]" />
+        <AsciiStatue size={5} />
       </div>
     );
   }

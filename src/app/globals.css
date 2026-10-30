@@ -16,6 +16,13 @@
   --faint: #5e5b56;
   --crystal: #8ecdf2;
   --crystal-soft: #0f202b;
+  /* A small, soft palette for colour that labels (topics) — muted so the page stays calm. */
+  --hue-sky: #8ecdf2;
+  --hue-sage: #9fd4b4;
+  --hue-amber: #e6c48c;
+  --hue-rose: #e8a7b6;
+  --hue-violet: #b8a9f0;
+  --hue-teal: #84cfc8;
   --accent: #eceae5;
   --accent-fg: #000000;
   --success: #86c29f;
@@ -351,6 +358,37 @@ input[type="time"]::-webkit-calendar-picker-indicator {
 ::view-transition-old(root),
 ::view-transition-new(root) {
   animation: none;
+}
+
+/* The ASCII statue: grey marble, with a band of light (and a hint of crystal) passing over it. */
+.ascii-marble {
+  --marble: color-mix(in oklab, var(--fg) 72%, var(--muted));
+  font-weight: 600;
+  background-image: linear-gradient(
+    105deg,
+    var(--marble) 0%,
+    var(--marble) 38%,
+    #ffffff 46%,
+    var(--crystal) 50%,
+    #ffffff 54%,
+    var(--marble) 62%,
+    var(--marble) 100%
+  );
+  background-size: 260% 100%;
+  background-position: 130% 0;
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  animation: marble 7s 1.4s ease-in-out infinite;
+}
+@keyframes marble {
+  0% {
+    background-position: 130% 0;
+  }
+  55%,
+  100% {
+    background-position: -30% 0;
+  }
 }
 
 /* A bar that just filled up: one soft sweep of light. */

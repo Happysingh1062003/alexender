@@ -2,7 +2,7 @@
 
 import { ArrowRight } from "lucide-react";
 import { useEffect, useState } from "react";
-import { Statue } from "@/components/brand";
+import { AsciiStatue } from "@/components/AsciiStatue";
 import { Button, Input } from "@/components/ui";
 
 /**
@@ -27,7 +27,7 @@ export default function JoinPage() {
   return (
     <div className="relative flex min-h-dvh items-center justify-center overflow-hidden px-6 py-10">
       <div className="animate-sheet relative w-full max-w-xs text-center">
-        <Statue priority className="mx-auto mb-6 h-32 w-auto" />
+        <AsciiStatue size={5} className="mx-auto mb-6" />
         <h1 className="text-[28px] leading-none font-semibold tracking-tight" lang="grc">
           Ἀλέξανδρος
         </h1>

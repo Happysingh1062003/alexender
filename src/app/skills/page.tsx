@@ -39,6 +39,7 @@ export default function SkillsPage() {
   const bySkill = useMemo(() => {
     const map = new Map<string, Learning[]>();
     for (const l of learnings) {
+      if (!l.skillId) continue; // learned on its own, not for a skill
       if (!map.has(l.skillId)) map.set(l.skillId, []);
       map.get(l.skillId)!.push(l);
     }
@@ -48,7 +49,7 @@ export default function SkillsPage() {
   const planned = list.filter((k) => (k.steps ?? []).length > 0);
   const avg = planned.length ? planned.reduce((n, k) => n + stepProgress(k.steps).pct, 0) / planned.length : 0;
   const weekStart = addDays(today, -6);
-  const thisWeek = learnings.filter((l) => l.date >= weekStart).length;
+  const thisWeek = learnings.filter((l) => l.skillId && l.date >= weekStart).length;
   const current = list.find((k) => k.id === open);
 
   return (

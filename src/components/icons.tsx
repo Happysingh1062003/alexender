@@ -13,6 +13,8 @@ import {
   Landmark,
   Lightbulb,
   Dumbbell,
+  GraduationCap,
+  MessageCircleQuestionMark,
   Sprout,
   Swords,
   Repeat,
@@ -52,6 +54,8 @@ export const HabitsIcon = thin(Repeat);
 export const TimerIcon = thin(Timer);
 export const WorkoutIcon = thin(Dumbbell);
 export const SkillsIcon = thin(Sprout);
+export const LearningIcon = thin(GraduationCap);
+export const QuestionsIcon = thin(MessageCircleQuestionMark);
 export const ArenaIcon = thin(Swords);
 export const SettingsIcon = thin(Settings2);
 export const MoreIcon = thin(Ellipsis);

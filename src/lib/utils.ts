@@ -35,6 +35,7 @@ export const ytThumb = (id: string, size: "mq" | "hq" = "mq") => `https://i.ytim
 
 /** "45m", "1h 20m". */
 export const formatMinutes = (min: number) => {
+  if (min > 0 && min < 0.5) return "<1m"; // a few seconds still counts as something
   const total = Math.round(min);
   const h = Math.floor(total / 60);
   const m = total % 60;

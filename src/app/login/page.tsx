@@ -2,7 +2,7 @@
 
 import { ArrowRight } from "lucide-react";
 import { useState } from "react";
-import { Statue } from "@/components/brand";
+import { AsciiStatue } from "@/components/AsciiStatue";
 import { Button, Input } from "@/components/ui";
 
 export default function LoginPage() {
@@ -34,7 +34,7 @@ export default function LoginPage() {
           setPassword("");
         }}
       >
-        <Statue priority className="mx-auto mb-6 h-36 w-auto" />
+        <AsciiStatue size={5.2} className="mx-auto mb-6" />
         <h1 className="text-[28px] leading-none font-semibold tracking-tight" lang="grc">Ἀλέξανδρος</h1>
         <p className="mt-1 mb-8 text-[13px] text-muted">Private. Sign in to continue.</p>
         <Input

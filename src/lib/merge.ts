@@ -80,6 +80,7 @@ export function mergeData(local: Data, remote: Data, now = Date.now()): Data {
     workoutLogs: mergeRecords("workoutLogs", local.workoutLogs ?? [], remote.workoutLogs ?? [], deleted),
     skills: mergeRecords("skills", local.skills ?? [], remote.skills ?? [], deleted),
     learnings: mergeRecords("learnings", local.learnings ?? [], remote.learnings ?? [], deleted),
+    questions: mergeRecords("questions", local.questions ?? [], remote.questions ?? [], deleted),
     myStories: mergeRecords("myStories", local.myStories ?? [], remote.myStories ?? [], deleted),
     storiesRead: mergeRecords("storiesRead", local.storiesRead ?? [], remote.storiesRead ?? [], deleted),
     journal,
