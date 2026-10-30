@@ -124,6 +124,8 @@ interface Actions {
   addTask: (t: { title: string; date: string; priority?: Priority }) => void;
   updateTask: (id: string, patch: Partial<Task>) => void;
   toggleTask: (id: string) => void;
+  /** Mark a task as not done (or take that back). */
+  toggleNotDone: (id: string) => void;
   deleteTask: (id: string) => void;
   /** Copy a day's unfinished tasks to another day. The originals stay, marked not done. */
   carryOver: (from: string, to: string) => number;
@@ -300,7 +302,7 @@ export const useStore = create<Store>()(
           const task = s.tasks.find((t) => t.id === id);
           if (!task) return s;
           const now = Date.now();
-          const patch: Partial<Task> = task.done ? { done: false, completedAt: undefined } : { done: true, completedAt: now };
+          const patch: Partial<Task> = task.done ? { done: false, completedAt: undefined } : { done: true, completedAt: now, failed: undefined };
           const tasks = patchById(s.tasks, id, patch);
           return { tasks, days: withScore(s.days, tasks, task.date) };
         }),
@@ -311,6 +313,14 @@ export const useStore = create<Store>()(
           if (!task) return s;
           const tasks = s.tasks.filter((t) => t.id !== id);
           return { tasks, days: withScore(s.days, tasks, task.date), deleted: tombstone(s.deleted, "tasks", id) };
+        }),
+
+      toggleNotDone: (id) =>
+        setState((s) => {
+          const task = s.tasks.find((t) => t.id === id);
+          if (!task) return s;
+          const tasks = patchById(s.tasks, id, task.failed ? { failed: undefined } : { failed: true, done: false, completedAt: undefined });
+          return { tasks, days: withScore(s.days, tasks, task.date) };
         }),
 
       // A day's record never changes after the fact: an unfinished task stays not done on its day,

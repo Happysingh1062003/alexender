@@ -49,15 +49,15 @@ function DayTasks({ date, today }: { date: string; today: string }) {
             <span className="mt-0.5 flex size-4 shrink-0 items-center justify-center rounded-full bg-fg text-bg">
               <Check className="size-2.5" strokeWidth={3.5} />
             </span>
-          ) : over ? (
+          ) : over || t.failed ? (
             <span className="mt-0.5 flex size-4 shrink-0 items-center justify-center rounded-full bg-danger/15 text-danger">
               <X className="size-2.5" strokeWidth={3.5} />
             </span>
           ) : (
             <span className="mt-0.5 size-4 shrink-0 rounded-full border-[1.5px] border-faint" />
           )}
-          <span className={cn("min-w-0 flex-1 break-words", t.done ? "text-muted" : over ? "text-faint" : "")}>{t.title}</span>
-          {!t.done && over && <span className="shrink-0 text-[11px] text-danger/80">{t.carriedTo ? "Not done · moved" : "Not done"}</span>}
+          <span className={cn("min-w-0 flex-1 break-words", t.done ? "text-muted" : over || t.failed ? "text-faint" : "")}>{t.title}</span>
+          {!t.done && (over || t.failed) && <span className="shrink-0 text-[11px] text-danger/80">Not done</span>}
         </li>
       ))}
     </ul>

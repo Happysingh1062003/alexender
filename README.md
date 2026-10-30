@@ -130,7 +130,7 @@ journey
 <table>
 <tr><th align="left">Section</th><th align="left">What it is for</th><th align="left">The detail that matters</th></tr>
 
-<tr><td><b>Today</b></td><td>Your tasks, beside a small marble head of Alexander and today's completion %.</td><td>A day is <b>won</b> at 70% (your choice). A task ends with its day: yesterday's unfinished ones stay <b>not done</b>, and <i>Do today</i> copies one forward without erasing the miss.</td></tr>
+<tr><td><b>Today</b></td><td>Your tasks, beside a small marble head of Alexander and today's completion %.</td><td>A day is <b>won</b> at 70% (your choice). Tick a task ✓ done, or mark it ✕ <b>not done</b>. A task ends with its day: anything still open when the day is over counts as not done, and nothing slides into tomorrow.</td></tr>
 
 <tr><td><b>Habits</b></td><td>Things you do every day.</td><td>Only today can be ticked. A day left unticked stays <b>not done</b> — forever. Streaks, best streak, done rate, six months at a glance.</td></tr>
 

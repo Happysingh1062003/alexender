@@ -21,6 +21,8 @@ export interface Task {
   note?: string;
   /** Left unfinished and copied to this day. The task itself stays on its own day, not done. */
   carriedTo?: string;
+  /** Marked as not done — it counts against the day, like any task left open when the day ends. */
+  failed?: boolean;
 }
 
 export interface DayLog {

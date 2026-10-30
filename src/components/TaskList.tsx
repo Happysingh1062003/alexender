@@ -1,8 +1,7 @@
 "use client";
 
-import { ArrowRight, NotebookPen, X } from "lucide-react";
+import { NotebookPen, X } from "lucide-react";
 import { useMemo, useRef, useState, type ReactNode } from "react";
-import { addDays } from "@/lib/date";
 import { smooth, tap } from "@/lib/motion";
 import { byOrder, useStore } from "@/lib/store";
 import type { Task } from "@/lib/types";
@@ -10,10 +9,10 @@ import { cn, parseQuickTask } from "@/lib/utils";
 import { SortableList } from "./Sortable";
 import { Checkbox, IconButton, toast } from "./ui";
 
-/** Unfinished tasks in your order, finished ones below in the order they were done. */
+/** Open tasks in your order; then done ones in the order they were done; then the ones not done. */
+const rank = (t: Task) => (t.done ? 1 : t.failed ? 2 : 0);
 export const sortTasks = (a: Task, b: Task) =>
-  Number(a.done) - Number(b.done) ||
-  (a.done ? (a.completedAt ?? 0) - (b.completedAt ?? 0) : byOrder(a, b));
+  rank(a) - rank(b) || (a.done ? (a.completedAt ?? 0) - (b.completedAt ?? 0) : byOrder(a, b));
 
 /** The tasks of one day. Adding happens in the section's top bar; drag the handle to reorder. */
 export function TaskList({
@@ -29,8 +28,8 @@ export function TaskList({
     () => allTasks.filter((t) => t.date === date).sort(sortTasks),
     [allTasks, date],
   );
-  const open = tasks.filter((t) => !t.done);
-  const done = tasks.filter((t) => t.done);
+  const open = tasks.filter((t) => !t.done && !t.failed);
+  const done = tasks.filter((t) => t.done || t.failed);
 
   if (tasks.length === 0)
     return emptyText ? (
@@ -65,7 +64,7 @@ function TaskRow({
   task: Task;
   handle?: ReactNode;
 }) {
-  const { toggleTask, deleteTask, updateTask, restore } = useStore.getState();
+  const { toggleTask, toggleNotDone, deleteTask, updateTask, restore } = useStore.getState();
   const [editing, setEditing] = useState(false);
   const [title, setTitle] = useState(task.title);
   // Set once Enter or Escape has handled the edit, so the blur that follows doesn't act again.
@@ -106,14 +105,6 @@ function TaskRow({
     toast("Task deleted", { label: "Undo", run: () => restore("tasks", task) });
   };
 
-  const tomorrow = () => {
-    smooth(() => updateTask(task.id, { date: addDays(task.date, 1) }));
-    toast("Moved to the next day", {
-      label: "Undo",
-      run: () => updateTask(task.id, { date: task.date }),
-    });
-  };
-
   return (
     <div
       style={{ viewTransitionName: `task-${task.id}` }}
@@ -125,14 +116,26 @@ function TaskRow({
         <div className="flex w-7 shrink-0 justify-center pointer-coarse:hidden pointer-fine:opacity-0 pointer-fine:transition-opacity pointer-fine:group-hover:opacity-100">
           {handle}
         </div>
-        <Checkbox
-          checked={task.done}
-          onChange={() => {
-            if (!task.done) tap();
-            smooth(() => toggleTask(task.id));
-          }}
-          label={task.title}
-        />
+        {task.failed ? (
+          // Not done: a red cross. Tap it to take that back.
+          <button
+            type="button"
+            aria-label={`${task.title}: not done — tap to undo`}
+            onClick={() => smooth(() => toggleNotDone(task.id))}
+            className="hit flex size-[22px] shrink-0 items-center justify-center rounded-full bg-danger/15 text-danger transition-transform active:scale-90"
+          >
+            <X className="size-3.5" strokeWidth={3} />
+          </button>
+        ) : (
+          <Checkbox
+            checked={task.done}
+            onChange={() => {
+              if (!task.done) tap();
+              smooth(() => toggleTask(task.id));
+            }}
+            label={task.title}
+          />
+        )}
         <div className="ml-1 flex min-w-0 flex-1 items-center gap-2">
           {editing ? (
             <input
@@ -159,13 +162,16 @@ function TaskRow({
                 "min-w-0 py-3 text-left text-[15px] leading-snug break-words transition-[color] duration-300",
                 task.done
                   ? "text-faint line-through decoration-faint/70"
-                  : "text-fg",
+                  : task.failed
+                    ? "text-faint"
+                    : "text-fg",
               )}
             >
               {task.title}
             </button>
           )}
-          {task.priority === "high" && !task.done && (
+          {task.failed && <span className="shrink-0 text-[11.5px] text-danger/80">Not done</span>}
+          {task.priority === "high" && !task.done && !task.failed && (
             <span
               title="High priority"
               className="size-1.5 shrink-0 rounded-full bg-crystal"
@@ -182,11 +188,6 @@ function TaskRow({
               !editing && "pointer-coarse:hidden",
             )}
           >
-            {!task.done && (
-              <IconButton label="Move to next day" onClick={tomorrow}>
-                <ArrowRight className="size-3.5" />
-              </IconButton>
-            )}
             <IconButton
               label={task.note ? "Edit note" : "Add note"}
               onClick={openNote}
@@ -202,6 +203,17 @@ function TaskRow({
             </IconButton>
           </div>
         </div>
+        {!task.done && !task.failed && (
+          <button
+            type="button"
+            aria-label={`Mark ${task.title} as not done`}
+            title="Not done"
+            onClick={() => smooth(() => toggleNotDone(task.id))}
+            className="hit ml-0.5 flex size-[22px] shrink-0 items-center justify-center rounded-full border-[1.5px] border-line-strong text-faint transition-colors hover:border-danger/70 hover:text-danger active:scale-90"
+          >
+            <X className="size-3" strokeWidth={2.5} />
+          </button>
+        )}
       </div>
 
       {/* The note sits under the title, lined up with it. */}
