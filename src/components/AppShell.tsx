@@ -271,7 +271,10 @@ function TopBar() {
         <p className="text-[15px] font-medium lg:hidden">
           {pathname === "/" ? date : (section?.label ?? "Alexander")}
         </p>
-        <p className="hidden text-[13px] text-muted lg:block">{date}</p>
+        <p className="hidden text-[13px] lg:block">
+          {pathname !== "/" && section && <span className="font-medium text-fg">{section.label} · </span>}
+          <span className="text-muted">{date}</span>
+        </p>
         <div className="flex-1" />
         {/* Says plainly when this device isn't sharing data, so a mismatch is never a mystery. */}
         {(syncStatus === "off" || syncStatus === "offline" || syncStatus === "error") && (

@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useId, useMemo, useState } from "react";
-import { Input, ProgressBar, Segmented, Select } from "@/components/ui";
+import { AnimatedNumber, Input, ProgressBar, Segmented, Select } from "@/components/ui";
 import { fromKey } from "@/lib/date";
 import { computeLife, expectancyFor, formatNumber, LIFE_EXPECTANCY } from "@/lib/life";
 import { useClock, useStore } from "@/lib/store";
@@ -56,7 +56,7 @@ export default function LifePage() {
     <div className="mx-auto max-w-xl">
       <section className="text-center">
         <p key={view} className="animate-fade text-[64px] leading-none font-semibold tracking-[-0.04em] tabular-nums sm:text-[80px]">
-          {formatNumber(count)}
+          <AnimatedNumber value={count} format={(n) => formatNumber(Math.round(n))} />
         </p>
         <p className="mt-3 text-[14px] text-muted">{unit}</p>
       </section>

@@ -1,13 +1,13 @@
 "use client";
 
-import { Check, Trash2, X } from "lucide-react";
+import { Check, Sprout, Trash2, X } from "lucide-react";
 import { useMemo, useState } from "react";
 import { createPortal } from "react-dom";
 import { confirmDialog } from "@/components/dialog";
 import { SectionProgress } from "@/components/SectionProgress";
 import { SortableList } from "@/components/Sortable";
 import { StepPlanner, stepProgress } from "@/components/StepPlanner";
-import { IconButton, ProgressBar, Segmented } from "@/components/ui";
+import { EmptyState, IconButton, ProgressBar, Segmented } from "@/components/ui";
 import { addDays, daysBetween, fromKey } from "@/lib/date";
 import { byOrder, useClock, useStore } from "@/lib/store";
 import type { Learning, Skill } from "@/lib/types";
@@ -79,7 +79,7 @@ export default function SkillsPage() {
 
       {list.length > 0 && <SectionProgress value={avg} label="of the plan learned" detail={`${thisWeek} learned this week`} />}
 
-      {list.length === 0 && <p className="text-[14px] text-faint">Public speaking, Greek, guitar, sales. Plan what to learn, then write down what you learn each day.</p>}
+      {list.length === 0 && <EmptyState icon={<Sprout className="size-5" />} title="What are you growing into?" hint="Public speaking, Greek, guitar, sales. Plan what to learn, then write one line a day of what you learned." />}
 
       <SortableList items={list} onReorder={(ids) => reorder("skills", ids)} className="space-y-1">
         {(k, handle) => {

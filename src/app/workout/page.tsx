@@ -1,13 +1,13 @@
 "use client";
 
-import { Check, Plus, Trash2, Undo2, X } from "lucide-react";
+import { Check, Dumbbell, Plus, Trash2, Undo2, X } from "lucide-react";
 import { useMemo, useState } from "react";
 import { createPortal } from "react-dom";
 import { BarChart } from "@/components/charts";
 import { confirmDialog } from "@/components/dialog";
 import { SectionProgress } from "@/components/SectionProgress";
 import { SortableList } from "@/components/Sortable";
-import { IconButton, ProgressBar, Select, toast } from "@/components/ui";
+import { EmptyState, IconButton, ProgressBar, Select, toast } from "@/components/ui";
 import { addDays, fromKey, toKey } from "@/lib/date";
 import { tap } from "@/lib/motion";
 import { byOrder, useClock, useStore } from "@/lib/store";
@@ -102,7 +102,7 @@ export default function WorkoutPage() {
 
       {list.length > 0 && <SectionProgress value={avg * 100} label="of today's targets" detail={`${hit} of ${list.length} hit`} />}
 
-      {list.length === 0 && <p className="text-[14px] text-faint">Set a daily target you have to hit — 100 push-ups, 5 km, 10 minutes of plank. Log it as you go.</p>}
+      {list.length === 0 && <EmptyState icon={<Dumbbell className="size-5" />} title="A target you hit every day" hint="Type it above with a number — 100 push-ups, 5 km, 10 minutes of plank — and log it as you go." />}
 
       <SortableList items={list} onReorder={(ids) => reorder("exercises", ids)} className="space-y-2">
         {(e, handle) => <ExerciseRow exercise={e} totals={totals.get(e.id) ?? new Map()} today={today} days={days} handle={handle} onOpen={() => setOpen(e.id)} />}

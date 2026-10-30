@@ -69,12 +69,30 @@ function Running({ session, now }: { session: TimerSession; now: number }) {
   const left = session.endsAt - now;
   return (
     <section className="animate-fade text-center">
-      <p className="text-[13px] text-muted">{session.title}</p>
-      <p className="mt-2 text-[64px] leading-none font-semibold tracking-[-0.04em] tabular-nums sm:text-[80px]">{formatClock(left)}</p>
-      <p className="mt-3 text-[12.5px] text-faint tabular-nums">
-        Started {clockTime(session.startedAt)} · ends {clockTime(session.endsAt)}
-      </p>
-      <ProgressBar value={((total - left) / total) * 100} tone="crystal" className="mx-auto mt-8 max-w-xs" />
+      {/* The ring empties as time runs out; it breathes slowly while you work. */}
+      <div className="relative mx-auto aspect-square w-[min(78vw,300px)]">
+        <svg viewBox="0 0 100 100" className="absolute inset-0 -rotate-90" aria-hidden>
+          <circle cx="50" cy="50" r="46" fill="none" stroke="var(--surface-3)" strokeWidth="1.6" />
+          <circle
+            cx="50"
+            cy="50"
+            r="46"
+            fill="none"
+            stroke="var(--crystal)"
+            strokeWidth="1.8"
+            strokeLinecap="round"
+            pathLength={100}
+            strokeDasharray="100"
+            strokeDashoffset={100 - Math.max(0, Math.min(100, (left / total) * 100))}
+            className="breathe transition-[stroke-dashoffset] duration-1000 ease-linear"
+          />
+        </svg>
+        <div className="absolute inset-0 flex flex-col items-center justify-center px-6">
+          <p className="max-w-full truncate text-[13px] text-muted">{session.title}</p>
+          <p className="mt-1 text-[52px] leading-none font-semibold tracking-[-0.04em] tabular-nums sm:text-[60px]">{formatClock(left)}</p>
+          <p className="mt-2 text-[12px] text-faint tabular-nums">ends {clockTime(session.endsAt)}</p>
+        </div>
+      </div>
       <button
         onClick={() => stopTimer(session.id)}
         className="mt-8 inline-flex h-11 items-center gap-2 rounded-full border border-line-strong px-6 text-[14px] font-medium text-muted transition-colors hover:border-faint hover:text-fg active:scale-95"

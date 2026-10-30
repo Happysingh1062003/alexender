@@ -353,6 +353,89 @@ input[type="time"]::-webkit-calendar-picker-indicator {
   animation: none;
 }
 
+/* A bar that just filled up: one soft sweep of light. */
+.bar-shine {
+  position: relative;
+  overflow: hidden;
+}
+.bar-shine::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(90deg, transparent, rgb(255 255 255 / 0.7), transparent);
+  transform: translateX(-100%);
+  animation: shine 1.1s 0.5s var(--ease-out) both;
+}
+@keyframes shine {
+  to {
+    transform: translateX(100%);
+  }
+}
+
+/* Day won: sparks fly out from the statue, and a ring of light opens around it. */
+.burst > i {
+  position: absolute;
+  left: 50%;
+  top: 46%;
+  width: 5px;
+  height: 5px;
+  margin: -2.5px;
+  border-radius: 9999px;
+  background: var(--crystal);
+  animation: spark 1s var(--ease-out) both;
+}
+@keyframes spark {
+  from {
+    opacity: 1;
+    transform: rotate(var(--a)) translateY(0) scale(1);
+  }
+  to {
+    opacity: 0;
+    transform: rotate(var(--a)) translateY(-86px) scale(0.3);
+  }
+}
+.burst::before {
+  content: "";
+  position: absolute;
+  left: 50%;
+  top: 46%;
+  width: 60px;
+  height: 60px;
+  margin: -30px;
+  border-radius: 9999px;
+  border: 1.5px solid var(--crystal);
+  animation: halo 1.1s var(--ease-out) both;
+}
+@keyframes halo {
+  from {
+    opacity: 0.9;
+    transform: scale(0.4);
+  }
+  to {
+    opacity: 0;
+    transform: scale(3);
+  }
+}
+/* A perfect day: the statue keeps a faint crystal glow. */
+.statue-glow {
+  filter: drop-shadow(0 0 18px rgb(142 205 242 / 0.35));
+  transition: filter 1.2s var(--ease-out);
+}
+
+/* The running timer's ring breathes, slowly. */
+@keyframes breathe {
+  0%,
+  100% {
+    opacity: 0.55;
+  }
+  50% {
+    opacity: 1;
+  }
+}
+.breathe {
+  animation: breathe 4s ease-in-out infinite;
+}
+
 /* A bigger invisible tap area around a small control, so it is easy to hit with a finger. */
 .hit {
   position: relative;

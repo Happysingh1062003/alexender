@@ -137,12 +137,55 @@ export function Modal({ open, onClose, title, children, wide }: { open: boolean;
 }
 
 export function ProgressBar({ value, className, tone }: { value: number; className?: string; tone?: "success" | "crystal" }) {
+  const full = value >= 100;
   return (
     <div className={cn("h-1 w-full overflow-hidden rounded-full bg-surface-3", className)}>
       <div
-        className={cn("h-full rounded-full transition-[width] duration-700 ease-out", tone === "success" ? "bg-success" : tone === "crystal" ? "bg-crystal" : "bg-fg")}
+        className={cn(
+          "h-full rounded-full transition-[width] duration-700 ease-out",
+          tone === "success" ? "bg-success" : tone === "crystal" ? "bg-crystal" : "bg-fg",
+          // A light sweeps across once when a bar fills up.
+          full && "bar-shine",
+        )}
         style={{ width: `${Math.min(100, Math.max(0, value))}%` }}
       />
+    </div>
+  );
+}
+
+/**
+ * A number that glides to its new value instead of jumping — 42 → 57 counts up in half a second.
+ * `from` lets a number count up when it first appears.
+ */
+export function AnimatedNumber({ value, from, format = (n: number) => String(Math.round(n)), duration = 650 }: { value: number; from?: number; format?: (n: number) => string; duration?: number }) {
+  const [shown, setShown] = useState(from ?? value);
+  const at = useRef(from ?? value);
+  useEffect(() => {
+    const start = at.current;
+    if (start === value) return;
+    const reduce = matchMedia("(prefers-reduced-motion: reduce)").matches;
+    const began = performance.now();
+    let frame = requestAnimationFrame(function step(now) {
+      const k = reduce ? 1 : Math.min(1, (now - began) / duration);
+      const next = start + (value - start) * (1 - Math.pow(1 - k, 3));
+      at.current = next;
+      setShown(next);
+      if (k < 1) frame = requestAnimationFrame(step);
+    });
+    return () => cancelAnimationFrame(frame);
+  }, [value, duration]);
+  return <>{format(shown)}</>;
+}
+
+/** The same calm empty state everywhere: a soft icon, one line of what this is, one of how to start. */
+export function EmptyState({ icon, title, hint }: { icon: ReactNode; title: string; hint: string }) {
+  return (
+    <div className="animate-rise flex items-start gap-4 py-2">
+      <span className="flex size-11 shrink-0 items-center justify-center rounded-2xl bg-surface-2 text-crystal">{icon}</span>
+      <span className="min-w-0 pt-0.5">
+        <span className="block text-[15px] font-medium">{title}</span>
+        <span className="mt-0.5 block text-[13px] leading-relaxed text-faint">{hint}</span>
+      </span>
     </div>
   );
 }

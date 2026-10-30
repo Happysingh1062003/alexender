@@ -1,12 +1,12 @@
 "use client";
 
-import { Check, Trash2, X } from "lucide-react";
+import { Check, Repeat, Trash2, X } from "lucide-react";
 import { useMemo, useState } from "react";
 import { createPortal } from "react-dom";
 import { confirmDialog } from "@/components/dialog";
 import { SectionProgress } from "@/components/SectionProgress";
 import { SortableList } from "@/components/Sortable";
-import { IconButton } from "@/components/ui";
+import { EmptyState, IconButton } from "@/components/ui";
 import { addDays, fromKey, toKey } from "@/lib/date";
 import { tap } from "@/lib/motion";
 import { byOrder, useClock, useStore } from "@/lib/store";
@@ -101,7 +101,7 @@ export default function HabitsPage() {
         />
       )}
 
-      {list.length === 0 && <p className="text-[14px] text-faint">Add something you want to do every day. Tick it the day you do it — a day left unticked counts as missed.</p>}
+      {list.length === 0 && <EmptyState icon={<Repeat className="size-5" />} title="Small things, every day" hint="Add a habit above. Tick it the day you do it — a day left unticked counts as missed." />}
 
       {list.length > 0 && (
         <>
@@ -125,7 +125,7 @@ export default function HabitsPage() {
                   <div className="absolute top-1/2 -left-7 hidden -translate-y-1/2 opacity-0 transition-opacity group-hover:opacity-100 lg:block">{handle}</div>
                   <button onClick={() => setOpen(h.id)} className="min-w-0 flex-1 text-left">
                     <span className="block text-[15px] leading-snug break-words">{h.title}</span>
-                    <span className="block text-[11.5px] text-faint tabular-nums">{streak > 0 ? `${streak}-day streak` : "No streak yet"}</span>
+                    <span key={streak} className={cn("block text-[11.5px] tabular-nums", streak > 0 ? "animate-rise text-crystal/90" : "text-faint")}>{streak > 0 ? `${streak}-day streak` : "No streak yet"}</span>
                   </button>
                   <div className="flex shrink-0 items-center gap-1">
                     {days.map((d, i) => {

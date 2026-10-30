@@ -1,10 +1,10 @@
 "use client";
 
-import { Check, RotateCcw, Trash2, X } from "lucide-react";
+import { Check, Lightbulb, RotateCcw, Trash2, X } from "lucide-react";
 import { useState } from "react";
 import { createPortal } from "react-dom";
 import { SectionProgress } from "@/components/SectionProgress";
-import { IconButton, Segmented, toast } from "@/components/ui";
+import { EmptyState, IconButton, Segmented, toast } from "@/components/ui";
 import { useStore } from "@/lib/store";
 import type { Idea, IdeaStatus } from "@/lib/types";
 import { useBackToClose } from "@/lib/useBackToClose";
@@ -86,7 +86,7 @@ export default function IdeasPage() {
         </div>
       )}
 
-      {ideas.length === 0 && <p className="text-[14px] text-faint">Write it down before it’s gone. Research it later, then accept or reject it.</p>}
+      {ideas.length === 0 && <EmptyState icon={<Lightbulb className="size-5" />} title="Catch it before it's gone" hint="Write the idea above. Research it later, then accept or reject it — with the reason." />}
       {ideas.length > 0 && shown.length === 0 && (
         <p className="text-[14px] text-faint">{filter === "open" ? "Nothing waiting for a decision." : `No ${filter} ideas yet.`}</p>
       )}
