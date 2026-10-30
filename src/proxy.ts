@@ -1,8 +1,7 @@
 import { NextResponse, type NextRequest } from "next/server";
-import { readSession, SESSION_COOKIE, sitePassword } from "@/lib/auth";
+import { isSession, SESSION_COOKIE, sitePassword } from "@/lib/auth";
 
 // Sessions already checked by this server, so each page load doesn't re-verify the signature.
-// Only the signature is checked here; the API also confirms the account still exists.
 const verified = new Map<string, number>();
 const REMEMBER_MS = 5 * 60_000;
 
@@ -10,7 +9,7 @@ async function isSignedIn(password: string, cookie: string) {
   const key = `${password.length}:${cookie}`;
   const until = verified.get(key);
   if (until && until > Date.now()) return true;
-  if (!(await readSession(password, cookie))) return false;
+  if (!(await isSession(password, cookie))) return false;
   if (verified.size > 500) verified.clear();
   verified.set(key, Date.now() + REMEMBER_MS);
   return true;
@@ -30,7 +29,6 @@ export async function proxy(request: NextRequest) {
 }
 
 export const config = {
-  // Public-domain story pictures need no password, so they load straight from the CDN. Invite
-  // links (join) open without signing in; the link itself is the key.
-  matcher: ["/((?!_next/static|_next/image|login|join|api/auth|api/join|icon.svg|icons/|apple-icon.png|sw.js|alexander.webp|stories/|manifest.webmanifest|favicon.ico).*)"],
+  // Public-domain story pictures need no password, so they load straight from the CDN.
+  matcher: ["/((?!_next/static|_next/image|login|api/auth|icon.svg|icons/|apple-icon.png|sw.js|alexander.webp|stories/|manifest.webmanifest|favicon.ico).*)"],
 };

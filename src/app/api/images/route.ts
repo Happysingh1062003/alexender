@@ -3,15 +3,14 @@ import { databaseError, signedIn } from "@/lib/server/guard";
 
 const validId = (id: string | null): id is string => !!id && /^[\w-]{8,64}$/.test(id);
 
-/** A synced photo of the signed-in person. Ids are unique per upload, so responses can be cached forever. */
+/** A photo stored before photos stayed on the device. Ids are unique per upload, so responses can be cached forever. */
 async function handleGET(request: NextRequest) {
-  const ctx = await signedIn(request);
-  if (ctx instanceof Response) return ctx;
-  const { storage, viewer } = ctx;
+  const storage = await signedIn(request);
+  if (storage instanceof Response) return storage;
   const id = request.nextUrl.searchParams.get("id");
   if (!validId(id)) return Response.json({ error: "Invalid id" }, { status: 400 });
 
-  const image = await storage.getImage(viewer.id, id);
+  const image = await storage.getImage(id);
   if (!image) return Response.json({ error: "Not found" }, { status: 404 });
   return new Response(new Uint8Array(image.bytes), {
     headers: { "Content-Type": image.type, "Cache-Control": "private, max-age=31536000, immutable" },
@@ -19,12 +18,11 @@ async function handleGET(request: NextRequest) {
 }
 
 async function handleDELETE(request: NextRequest) {
-  const ctx = await signedIn(request);
-  if (ctx instanceof Response) return ctx;
-  const { storage, viewer } = ctx;
+  const storage = await signedIn(request);
+  if (storage instanceof Response) return storage;
   const id = request.nextUrl.searchParams.get("id");
   if (!validId(id)) return Response.json({ error: "Invalid id" }, { status: 400 });
-  await storage.deleteImage(viewer.id, id);
+  await storage.deleteImage(id);
   return Response.json({ ok: true });
 }
 

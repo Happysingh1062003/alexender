@@ -134,8 +134,8 @@ export function AppShell({ children }: { children: ReactNode }) {
     if (hydrated) startSync();
   }, [hydrated]);
 
-  // Signing in, and joining from an invite link, happen outside the app.
-  if (pathname === "/login" || pathname === "/join") return children;
+  // The sign-in page for the site password sits outside the app.
+  if (pathname === "/login") return children;
 
   if (status === "error") {
     return (

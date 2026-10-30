@@ -7,7 +7,7 @@
 **Iron Man has Jarvis. You have Alexander.**
 
 A private, calm command center — plan the day, keep your habits honest, hit your workout targets,<br/>
-time your deep work, grow your skills, race your friends, and never forget how much time is left.
+time your deep work, grow your skills, and never forget how much time is left.
 
 <br/>
 
@@ -30,7 +30,7 @@ time your deep work, grow your skills, race your friends, and never forget how m
 <td width="33%" valign="top">
 
 ### ⚔️ &nbsp;Act
-Today's tasks, daily habits, workout targets, a focus timer — and an arena to race your friends.
+Today's tasks, daily habits, workout targets, a focus timer, and a calendar of how your days went.
 
 </td>
 <td width="33%" valign="top">
@@ -56,7 +56,6 @@ A journal that fits above the keyboard, true stories of courage, and your life c
 - [A day with Alexander](#a-day-with-alexander)
 - [Every section](#every-section)
 - [How the honest parts work](#how-the-honest-parts-work)
-- [Invite people and race](#invite-people-and-race)
 - [Under the hood](#under-the-hood)
 - [Sync between phone and laptop](#sync-between-phone-and-laptop)
 - [Install it as an app](#install-it-as-an-app)
@@ -70,7 +69,7 @@ A journal that fits above the keyboard, true stories of courage, and your life c
 
 ## The map
 
-Twenty-two sections, in four families. On a phone the four you use most sit in the bottom bar; a glowing crystal orb above it opens all the rest. While you type, the bar and the orb step aside.
+Twenty-one sections, in four families. On a phone the four you use most sit in the bottom bar; a glowing crystal orb above it opens all the rest. While you type, the bar and the orb step aside.
 
 ```mermaid
 mindmap
@@ -81,7 +80,6 @@ mindmap
       Workout
       Timer
       Calendar
-      Arena
     Aim
       Mission
       Goals
@@ -142,7 +140,6 @@ journey
 
 <tr><td><b>Calendar</b></td><td>How your days really went.</td><td>Average, days won, streak and focus time over 7 / 30 / 90 days; scrub the charts with a finger; a six-month heatmap; any day's tasks marked ✓ done or ✕ not done.</td></tr>
 
-<tr><td><b>Arena</b></td><td>Race the people you invited.</td><td>Today is a chariot race to 100%; the week is a leaderboard; tournaments are a road of steps — first to the end wins.</td></tr>
 
 <tr><td><b>Mission</b></td><td>At most <b>three</b> missions for life.</td><td>Each has a title, description and icon. Opening one shows its vision first — your images, whole, one below another — then the plan.</td></tr>
 
@@ -251,50 +248,9 @@ pie showData title A 72-year life, in weeks (example, age 25)
 
 ---
 
-## Invite people and race
-
-You can give Alexander to anyone. Each person gets their **own private Alexander** — their own tasks, habits, journal and photos — and in the Arena you race each other on one thing: finishing the day's tasks.
-
-```mermaid
-flowchart LR
-  A[Settings → People] --> B[Tap Invite someone]
-  B --> C[Share sheet:<br/>WhatsApp, Messages…]
-  C --> D[They open the link]
-  D --> E[Pick their own name<br/>and password]
-  E --> F[Straight onto Today]
-  F --> G((Arena))
-
-  classDef crystal fill:#0f202b,stroke:#8ecdf2,color:#eceae5
-  class G crystal
-```
-
-- **One tap to invite.** *Invite someone* makes a link and opens your phone's share sheet. On a computer it copies the link, and it's also shown under the button with **Copy** and **Send**.
-- **They choose everything.** Whoever opens the link picks their own name and password, and lands straight on Today, with no setup screens.
-- **Safe links.** Each link works **once**, for **7 days**, and you can cancel it anytime. The code sits after the `#`, so it never shows up in server logs.
-- **You** sign in with the site password (leave the name empty). **They** sign in later with their name and password, and can change the password in Settings.
-- You can still set someone's name and password yourself (under *Or set their name and password yourself*), give someone a new password (it signs them out everywhere), or remove them with all their data.
-- **Shared in the Arena:** how many tasks each person had and finished each day. **Never shared:** what the tasks are, or anything else.
-
-**Today's race** — every lane is a person, every token moves to the flag as their tasks get done. A herald calls the race: *"Asha leads. 2 more tasks to pass her."*
-
-**This week** — a point for every % of every day; a day is won at 70%, the same line for everyone.
-
-**Tournaments** — anyone can start one and choose who's in:
-
-| How to win | Example | A step is |
-| :-- | :-- | :-- |
-| **Goal** | Main goal *Run 5 km*, tasks *Run 1 km → 3 km → 5 km* | one task of the goal, ticked in the Arena |
-| Winning days | First to 7 winning days | a day at the win line or above |
-| Tasks done | First to 50 tasks | one finished task |
-| Streak | First to a 5-day streak | a won day in a row |
-
-The first to the last step wins and is crowned. Goal tournaments are decided to the minute — the moment of your last tick — and finishing locks your ticks in; the others tie on the same day and share the crown.
-
----
-
 ## Under the hood
 
-Every device keeps its own full copy of your data, so the app opens instantly and works on a plane. **Only your tasks** (with each day's score and your name, for the Arena) and **tournaments** are stored in Neon. Habits, journal, missions, goals, skills, workouts, books, photos — everything else — stays on the device.
+Every device keeps its own full copy of your data, so the app opens instantly and works on a plane. **Only your tasks** (with each day's score and your name) are stored in Neon. Habits, journal, missions, goals, skills, workouts, books, photos — everything else — stays on the device.
 
 ```mermaid
 flowchart LR
@@ -476,7 +432,7 @@ Two locks, one on the website and one on each device.
 flowchart TB
   R([Someone opens your site]) --> P{Website password?}
   P -->|wrong| X[Stopped · 5 wrong tries = 10 minute lockout]
-  P -->|right| C[Signed in for 30 days · as you, or as someone you invited]
+  P -->|right| C[Signed in for 30 days]
   C --> L{Device passcode set?}
   L -->|yes| K[Passcode screen<br/>again after 5 minutes away]
   L -->|no| A
@@ -487,7 +443,6 @@ flowchart TB
 ```
 
 - **Website password** — `ALEXANDER_PASSWORD` in your host's environment (or `.env.local`). Every page and every sync request is checked on the server first. The old spelling `ALEXENDER_PASSWORD` still works.
-- **Invited people** — their passwords are stored only as salted PBKDF2 hashes. Every request is answered for the signed-in person only; each device keeps a separate local copy per person, so a shared phone never mixes data.
 - **Passcode** — set in Settings → Privacy or during setup. Stored only as a salted hash.
 - **Backups** — Settings → *Your data* exports everything, photos included, as one file; import restores it on every device.
 - The story pictures and the statue are public-domain images and load without the password, so they can be cached.
@@ -500,18 +455,18 @@ flowchart TB
 src/
 ├─ app/                    one folder per section
 │  ├─ page.tsx             Today
-│  ├─ habits/  workout/  timer/  skills/  arena/  calendar/
+│  ├─ habits/  workout/  timer/  skills/  learning/  questions/  calendar/
 │  ├─ mission/  goals/  plans/  ideas/
 │  ├─ journal/  books/  videos/  podcasts/  stories/  bucket/  dont/
 │  ├─ life/  settings/  login/
-│  └─ api/                 sync · images · auth · me · people · account · arena · tournaments · oembed
+│  └─ api/                 sync · images · auth · oembed
 ├─ components/             AppShell (bars, orb), dialogs, charts, lists, timer watcher
 ├─ lib/
 │  ├─ store.ts             all data and actions (Zustand + IndexedDB)
 │  ├─ sync.ts · merge.ts   keeping devices in step
 │  ├─ timer.ts · life.ts   the maths behind Timer and Life
 │  ├─ stories.ts           the 56 stories and their sources
-│  └─ server/              per-person storage, accounts, tournaments, the sign-in guard
+│  └─ server/              Neon storage and the sign-in guard
 └─ proxy.ts                the website password gate
 public/
 ├─ alexander.webp          the statue

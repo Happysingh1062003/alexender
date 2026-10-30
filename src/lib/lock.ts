@@ -1,7 +1,5 @@
 "use client";
 
-import { scoped } from "./account";
-
 /*
  * Device passcode helpers. The passcode is stored only as a salted, stretched SHA-256 hash.
  * A pure-JS SHA-256 is used (instead of crypto.subtle) so hashes match everywhere —
@@ -91,13 +89,13 @@ export function createLock(passcode: string) {
 export const verifyPasscode = (passcode: string, lock: { salt: string; hash: string }) =>
   hashPasscode(passcode, lock.salt) === lock.hash;
 
-// Unlocking lasts for this browser tab (per account); leaving it in the background for a while locks it again.
+// Unlocking lasts for this browser tab; leaving it in the background for a while locks it again.
 const SESSION_KEY = "alex-unlocked";
 export const AUTO_LOCK_MS = 5 * 60_000;
 
 export function readUnlocked() {
   try {
-    return sessionStorage.getItem(scoped(SESSION_KEY)) === "1";
+    return sessionStorage.getItem(SESSION_KEY) === "1";
   } catch {
     return false;
   }
@@ -105,8 +103,8 @@ export function readUnlocked() {
 
 export function writeUnlocked(value: boolean) {
   try {
-    if (value) sessionStorage.setItem(scoped(SESSION_KEY), "1");
-    else sessionStorage.removeItem(scoped(SESSION_KEY));
+    if (value) sessionStorage.setItem(SESSION_KEY, "1");
+    else sessionStorage.removeItem(SESSION_KEY);
   } catch {}
 }
 
@@ -115,7 +113,7 @@ const FAILS_KEY = "alex-lock-fails";
 
 export function readFails(): { count: number; until: number } {
   try {
-    const parsed = JSON.parse(localStorage.getItem(scoped(FAILS_KEY)) ?? "null");
+    const parsed = JSON.parse(localStorage.getItem(FAILS_KEY) ?? "null");
     if (parsed && typeof parsed.count === "number" && typeof parsed.until === "number") return parsed;
   } catch {}
   return { count: 0, until: 0 };
@@ -123,7 +121,7 @@ export function readFails(): { count: number; until: number } {
 
 export function writeFails(fails: { count: number; until: number }) {
   try {
-    if (fails.count || fails.until) localStorage.setItem(scoped(FAILS_KEY), JSON.stringify(fails));
-    else localStorage.removeItem(scoped(FAILS_KEY));
+    if (fails.count || fails.until) localStorage.setItem(FAILS_KEY, JSON.stringify(fails));
+    else localStorage.removeItem(FAILS_KEY);
   } catch {}
 }

@@ -6,7 +6,7 @@ export default function manifest(): MetadataRoute.Manifest {
     id: "/",
     name: "Ἀλέξανδρος — Alexander",
     short_name: "Alexander",
-    description: "Your private command center — plan the day, keep your habits, race your friends.",
+    description: "Your private command center — plan the day, keep your habits, grow every day.",
     start_url: "/",
     scope: "/",
     display: "standalone",
@@ -27,7 +27,6 @@ export default function manifest(): MetadataRoute.Manifest {
     shortcuts: [
       { name: "Today", url: "/", icons: [{ src: "/icons/icon-192.png", sizes: "192x192" }] },
       { name: "Habits", url: "/habits", icons: [{ src: "/icons/icon-192.png", sizes: "192x192" }] },
-      { name: "Arena", url: "/arena", icons: [{ src: "/icons/icon-192.png", sizes: "192x192" }] },
     ],
   };
 }

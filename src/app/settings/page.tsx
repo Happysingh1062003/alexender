@@ -12,7 +12,6 @@ import { verifyPasscode } from "@/lib/lock";
 import { useClock, useStore } from "@/lib/store";
 import { forgetReplaced, makeThisDeviceTheSource, readReplaced, resetEverywhere, syncNow, useSync, type Replaced } from "@/lib/sync";
 import { alertDialog, confirmDialog, promptDialog } from "@/components/dialog";
-import { AccountSection } from "@/components/People";
 
 function useStorageInfo() {
   const [info, setInfo] = useState<{ persisted: boolean; usage: number } | null>(null);
@@ -55,7 +54,6 @@ export default function SettingsPage() {
         <p className="mt-3 text-[12px] text-faint">Birth date and country for the Life section are set on the Life page.</p>
       </Card>
 
-      <AccountSection />
       <SyncCard />
       <Privacy />
       <YourData />
@@ -187,7 +185,7 @@ function SyncCard() {
           <p className="text-muted">
             {on
               ? storage === "cloud"
-                ? "Only your tasks (and the Arena's daily scores) are kept in your Neon database, so they match on every device. Everything else — habits, journal, missions, photos — stays on this device. Export a backup to move it."
+                ? "Only your tasks are kept in your Neon database, so they match on every device. Everything else — habits, journal, missions, photos — stays on this device. Export a backup to move it."
                 : "Your tasks are shared through this computer with every device that opens this same address. Everything else stays on each device."
               : (message ?? "Sync isn't set up on this site.")}
           </p>

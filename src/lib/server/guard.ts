@@ -1,15 +1,12 @@
 import { unstable_rethrow } from "next/navigation";
 import type { NextRequest } from "next/server";
-import { OWNER, readSession, SESSION_COOKIE, sitePassword } from "../auth";
-import { getStorage, type Account, type Storage } from "./storage";
+import { isSession, SESSION_COOKIE, sitePassword } from "../auth";
+import { getStorage, type Storage } from "./storage";
 
 /*
  * Sync is only served when it is safe: on a live site a website password is required (the proxy
- * checks it on every request), and there must be somewhere to keep the data. Every request is
- * answered for the account it is signed in as — never anyone else's.
+ * checks it on every request), and there must be somewhere to keep the data.
  */
-
-export type Viewer = { id: string; role: "owner" | "member"; account?: Account };
 
 export function syncStorage(): Storage | Response {
   if (process.env.NODE_ENV === "production" && !sitePassword()) {
@@ -22,28 +19,15 @@ export function syncStorage(): Storage | Response {
   return storage;
 }
 
-/**
- * Who is asking. Without a site password (your own computer) there is only the owner. A removed
- * account, or one whose password was changed since, no longer counts.
- */
-export async function viewer(request: NextRequest, storage: Storage | null = getStorage()): Promise<Viewer | null> {
-  const password = sitePassword();
-  if (!password) return { id: OWNER, role: "owner" };
-  const session = await readSession(password, request.cookies.get(SESSION_COOKIE)?.value ?? "");
-  if (!session) return null;
-  if (session.user === OWNER) return { id: OWNER, role: "owner" };
-  const account = storage ? await storage.getAccount(session.user) : null;
-  return account && account.session === session.version ? { id: account.id, role: "member", account } : null;
-}
-
-const signedOut = () => Response.json({ code: "signed-out", error: "Signed out — sign in again." }, { status: 401 });
-
-/** Storage and the signed-in account, or the response to send instead. */
-export async function signedIn(request: NextRequest): Promise<{ storage: Storage; viewer: Viewer } | Response> {
+/** Storage, if you're signed in (or no password is set — your own computer); otherwise the response to send. */
+export async function signedIn(request: NextRequest): Promise<Storage | Response> {
   const storage = syncStorage();
   if (storage instanceof Response) return storage;
-  const who = await viewer(request, storage);
-  return who ? { storage, viewer: who } : signedOut();
+  const password = sitePassword();
+  if (password && !(await isSession(password, request.cookies.get(SESSION_COOKIE)?.value ?? ""))) {
+    return Response.json({ code: "signed-out", error: "Signed out — sign in again." }, { status: 401 });
+  }
+  return storage;
 }
 
 /**

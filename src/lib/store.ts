@@ -3,7 +3,6 @@
 import { del, get, set } from "idb-keyval";
 import { create } from "zustand";
 import { persist, type PersistStorage, type StorageValue } from "zustand/middleware";
-import { scoped } from "./account";
 import { todayKey } from "./date";
 import { deleteImages, deleteImagesLater, keepImages } from "./images";
 import type { Book, BucketItem, DayLog, Exercise, Goal, Habit, HabitCheck, Idea, Question, Learning, Skill, WorkoutLog, WorkoutUnit, JournalEntry, ListItem, Mission, MyStory, Plan, Priority, Settings, StoryRead, Task, TimerSession, TimerTask, Video } from "./types";
@@ -32,18 +31,18 @@ if (typeof window !== "undefined") {
 
 const idbStorage: PersistStorage<Data> = {
   getItem: async (name) => {
-    const raw = await get<string | StorageValue<Data>>(scoped(name));
+    const raw = await get<string | StorageValue<Data>>(name);
     return raw == null ? null : typeof raw === "string" ? JSON.parse(raw) : raw;
   },
   setItem: (name, value) => {
-    pendingSave = { name: scoped(name), value };
+    pendingSave = { name: name, value };
     clearTimeout(saveTimer);
     saveTimer = setTimeout(flushSave, 400);
   },
   removeItem: async (name) => {
     pendingSave = null;
     clearTimeout(saveTimer);
-    await del(scoped(name));
+    await del(name);
   },
 };
 

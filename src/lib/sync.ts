@@ -13,7 +13,6 @@ import {
   useStore,
   type Data,
 } from "./store";
-import { scoped } from "./account";
 import { uid } from "./utils";
 
 /*
@@ -44,8 +43,8 @@ export const useSync = create<{
 export type Replaced = { at: number; data: Data };
 const REPLACED_KEY = "alexender-replaced";
 export const readReplaced = () =>
-  get<Replaced>(scoped(REPLACED_KEY)).catch(() => undefined);
-export const forgetReplaced = () => del(scoped(REPLACED_KEY)).catch(() => {});
+  get<Replaced>(REPLACED_KEY).catch(() => undefined);
+export const forgetReplaced = () => del(REPLACED_KEY).catch(() => {});
 
 /** Anything you made yourself — worth keeping a copy of before it's replaced. */
 const hasContent = (d: Data) =>
@@ -64,14 +63,14 @@ const RESET_PREFIX = "r-";
 
 function readMeta(): { version: number; epoch?: string } {
   try {
-    return JSON.parse(localStorage.getItem(scoped(META_KEY)) ?? "") ?? { version: 0 };
+    return JSON.parse(localStorage.getItem(META_KEY) ?? "") ?? { version: 0 };
   } catch {
     return { version: 0 };
   }
 }
 const writeMeta = (meta: { version: number; epoch?: string }) => {
   try {
-    localStorage.setItem(scoped(META_KEY), JSON.stringify(meta));
+    localStorage.setItem(META_KEY, JSON.stringify(meta));
   } catch {}
 };
 
@@ -210,7 +209,7 @@ async function reconcile(doc: ServerDoc | null, attempt = 0): Promise<void> {
       epoch = doc.data.epoch;
       // Nothing is lost silently: keep what this device had, so it can be downloaded from Settings.
       if (hasContent(local) && stableStringify(local.tasks) !== stableStringify(remote.tasks))
-        void set(scoped(REPLACED_KEY), {
+        void set(REPLACED_KEY, {
           at: Date.now(),
           data: local,
         } satisfies Replaced)

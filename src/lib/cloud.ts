@@ -2,8 +2,8 @@ import type { Data } from "./store";
 
 /*
  * What leaves the device. Only tasks go to the cloud — with each day's score (done of total) and
- * your display name, which the Arena needs. Habits, journal, missions, books, photos and the rest
- * stay on this device only. Tournaments live on the server too, since everyone in one shares it.
+ * your name, so a new device starts ready. Habits, journal, missions, books, photos and the rest
+ * stay on this device only.
  * Used by both the app (what it sends) and the server (what it agrees to keep).
  */
 

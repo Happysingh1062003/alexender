@@ -38,7 +38,7 @@ export function LockScreen() {
   /** With a website password, proving it resets the passcode; otherwise the only way in is erasing. */
   const forgot = async () => {
     if (siteLock) {
-      const password = await promptDialog("Enter your sign-in password", { detail: "This removes the passcode. Your data stays as it is.", password: true });
+      const password = await promptDialog("Enter your website password", { detail: "This removes the passcode. Your data stays as it is.", password: true });
       if (!password) return;
       const res = await fetch("/api/auth", {
         method: "POST",
