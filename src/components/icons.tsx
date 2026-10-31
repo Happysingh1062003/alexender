@@ -8,7 +8,6 @@ import {
   Ellipsis,
   Feather,
   Flag,
-  Headphones,
   Hourglass,
   Landmark,
   Lightbulb,
@@ -39,13 +38,12 @@ export const TodayIcon = thin(Sun);
 export const CalendarIcon = thin(Calendar);
 export const MissionIcon = thin(Flag);
 export const JournalIcon = thin(Feather);
-export const VideosIcon = thin(CirclePlay);
+export const YouTubeIcon = thin(CirclePlay);
 export const BooksIcon = thin(BookOpen);
 export const BucketIcon = thin(Compass);
 export const LifeIcon = thin(Hourglass);
 export const GoalsIcon = thin(Target);
 export const DontIcon = thin(Ban);
-export const PodcastsIcon = thin(Headphones);
 export const PlansIcon = thin(ClipboardList);
 export const StoriesIcon = thin(Landmark);
 export const IdeasIcon = thin(Lightbulb);

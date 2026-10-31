@@ -5,7 +5,7 @@ import { create } from "zustand";
 import { persist, type PersistStorage, type StorageValue } from "zustand/middleware";
 import { todayKey } from "./date";
 import { deleteImages, deleteImagesLater, keepImages } from "./images";
-import type { Book, BucketItem, DayLog, Exercise, Goal, Habit, HabitCheck, Idea, Question, Learning, Skill, WorkoutLog, WorkoutUnit, JournalEntry, ListItem, Mission, MyStory, Plan, Priority, Settings, StoryRead, Task, TimerSession, TimerTask, Video } from "./types";
+import type { Book, BucketItem, DayLog, Exercise, Goal, Habit, HabitCheck, Idea, Playlist, Question, Learning, Skill, WorkoutLog, WorkoutUnit, JournalEntry, ListItem, Mission, MyStory, Plan, Priority, Settings, StoryRead, Task, TimerSession, TimerTask, Video } from "./types";
 import { pct, uid } from "./utils";
 
 /*
@@ -47,10 +47,10 @@ const idbStorage: PersistStorage<Data> = {
 };
 
 /** Collections whose records sync individually. Tombstone keys are `${kind}:${id}`. */
-export type Kind = "tasks" | "missions" | "goals" | "videos" | "books" | "bucket" | "donts" | "podcasts" | "plans" | "ideas" | "habits" | "habitChecks" | "timerTasks" | "timerSessions" | "exercises" | "workoutLogs" | "skills" | "learnings" | "questions" | "myStories" | "storiesRead" | "journal";
+export type Kind = "tasks" | "missions" | "goals" | "videos" | "books" | "bucket" | "donts" | "podcasts" | "plans" | "ideas" | "habits" | "habitChecks" | "timerTasks" | "timerSessions" | "exercises" | "workoutLogs" | "skills" | "learnings" | "questions" | "playlists" | "myStories" | "storiesRead" | "journal";
 
 /** Collections that can be reordered by dragging. */
-export type OrderedKind = "tasks" | "missions" | "goals" | "videos" | "books" | "bucket" | "donts" | "podcasts" | "plans" | "ideas" | "habits" | "timerTasks" | "exercises" | "skills" | "learnings" | "questions";
+export type OrderedKind = "tasks" | "missions" | "goals" | "videos" | "books" | "bucket" | "donts" | "podcasts" | "plans" | "ideas" | "habits" | "timerTasks" | "exercises" | "skills" | "learnings" | "questions" | "playlists";
 
 /** The simple lists that share one shape (ListItem). */
 export type ListKind = "donts" | "podcasts";
@@ -76,6 +76,7 @@ export interface Data {
   skills: Skill[];
   learnings: Learning[];
   questions: Question[];
+  playlists: Playlist[];
   myStories: MyStory[];
   storiesRead: StoryRead[];
   journal: Record<string, JournalEntry>;
@@ -84,7 +85,7 @@ export interface Data {
   deleted: Record<string, number>;
 }
 
-export const DATA_KEYS = ["tasks", "days", "missions", "goals", "videos", "books", "bucket", "donts", "podcasts", "plans", "ideas", "habits", "habitChecks", "timerTasks", "timerSessions", "exercises", "workoutLogs", "skills", "learnings", "questions", "myStories", "storiesRead", "journal", "settings", "deleted"] as const;
+export const DATA_KEYS = ["tasks", "days", "missions", "goals", "videos", "books", "bucket", "donts", "podcasts", "plans", "ideas", "habits", "habitChecks", "timerTasks", "timerSessions", "exercises", "workoutLogs", "skills", "learnings", "questions", "playlists", "myStories", "storiesRead", "journal", "settings", "deleted"] as const;
 
 const defaultSettings: Settings = {
   name: "",
@@ -114,6 +115,7 @@ const initialData: Data = {
   skills: [],
   learnings: [],
   questions: [],
+  playlists: [],
   myStories: [],
   storiesRead: [],
   journal: {},
@@ -206,6 +208,12 @@ interface Actions {
   addLearning: (skillId: string | undefined, text: string, source?: string) => void;
   deleteLearning: (id: string) => void;
 
+  addPlaylist: (p: { url: string; listId: string; title: string }) => string;
+  updatePlaylist: (id: string, patch: Partial<Playlist>) => void;
+  /** Finished, or back on the list. */
+  togglePlaylist: (id: string) => void;
+  deletePlaylist: (id: string) => void;
+
   addQuestion: (text: string, topic?: string) => string;
   updateQuestion: (id: string, patch: Partial<Question>) => void;
   deleteQuestion: (id: string) => void;
@@ -267,6 +275,7 @@ export function normalize(p: Partial<Data>): Data {
     skills: p.skills ?? [],
     learnings: p.learnings ?? [],
     questions: p.questions ?? [],
+    playlists: p.playlists ?? [],
     myStories: p.myStories ?? [],
     storiesRead: p.storiesRead ?? [],
     journal: p.journal ?? {},
@@ -577,6 +586,21 @@ export const useStore = create<Store>()(
           learnings: [...s.learnings, { id: uid(), text, date: todayKey(), createdAt: now, updatedAt: now, ...(skillId && { skillId }), ...(source?.trim() && { source: source.trim() }) }],
         }));
       },
+      addPlaylist: (p) => {
+        const id = uid();
+        const now = Date.now();
+        setState((s) => ({ playlists: [...s.playlists, { ...p, id, done: false, createdAt: now, updatedAt: now, order: nextOrder(s.playlists) }] }));
+        return id;
+      },
+      updatePlaylist: (id, patch) => setState((s) => ({ playlists: patchById(s.playlists, id, patch) })),
+      togglePlaylist: (id) =>
+        setState((s) => {
+          const p = s.playlists.find((x) => x.id === id);
+          if (!p) return s;
+          return { playlists: patchById(s.playlists, id, p.done ? { done: false, completedAt: undefined, order: nextOrder(s.playlists) } : { done: true, completedAt: Date.now() }) };
+        }),
+      deletePlaylist: (id) => setState((s) => ({ playlists: s.playlists.filter((x) => x.id !== id), deleted: tombstone(s.deleted, "playlists", id) })),
+
       addQuestion: (text, topic) => {
         const id = uid();
         const now = Date.now();
@@ -655,8 +679,8 @@ export const useStore = create<Store>()(
 
 /** The persisted/synced part of the store. */
 export function pickData(s: Data): Data {
-  const { tasks, days, missions, goals, videos, books, bucket, donts, podcasts, plans, ideas, habits, habitChecks, timerTasks, timerSessions, exercises, workoutLogs, skills, learnings, questions, myStories, storiesRead, journal, settings, deleted } = s;
-  return { tasks, days, missions, goals, videos, books, bucket, donts, podcasts, plans, ideas, habits, habitChecks, timerTasks, timerSessions, exercises, workoutLogs, skills, learnings, questions, myStories, storiesRead, journal, settings, deleted };
+  const { tasks, days, missions, goals, videos, books, bucket, donts, podcasts, plans, ideas, habits, habitChecks, timerTasks, timerSessions, exercises, workoutLogs, skills, learnings, questions, playlists, myStories, storiesRead, journal, settings, deleted } = s;
+  return { tasks, days, missions, goals, videos, books, bucket, donts, podcasts, plans, ideas, habits, habitChecks, timerTasks, timerSessions, exercises, workoutLogs, skills, learnings, questions, playlists, myStories, storiesRead, journal, settings, deleted };
 }
 
 /** Every image id referenced anywhere — used for backups and photo sync. */

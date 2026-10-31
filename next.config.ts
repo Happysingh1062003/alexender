@@ -6,6 +6,13 @@ const nextConfig: NextConfig = {
   partialPrefetching: true,
   // No floating dev badge over the app; compile errors still show.
   devIndicators: false,
+  // Videos and Podcasts now live together in YouTube.
+  redirects() {
+    return [
+      { source: "/videos", destination: "/youtube", permanent: true },
+      { source: "/podcasts", destination: "/youtube", permanent: true },
+    ];
+  },
   // Story pictures and the statue rarely change: phones keep them for a week and refresh quietly.
   headers() {
     const cache = [{ key: "Cache-Control", value: "public, max-age=604800, stale-while-revalidate=2592000" }];

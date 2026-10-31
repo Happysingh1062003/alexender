@@ -11,7 +11,6 @@ import {
   LifeIcon,
   MissionIcon,
   PlansIcon,
-  PodcastsIcon,
   QuestionsIcon,
   SettingsIcon,
   StoriesIcon,
@@ -19,7 +18,7 @@ import {
   TimerIcon,
   WorkoutIcon,
   TodayIcon,
-  VideosIcon,
+  YouTubeIcon,
 } from "@/components/icons";
 
 export const NAV = [
@@ -38,8 +37,7 @@ export const NAV = [
   { href: "/ideas", label: "Ideas", icon: IdeasIcon },
   { href: "/journal", label: "Journal", icon: JournalIcon },
   { href: "/books", label: "Books", icon: BooksIcon },
-  { href: "/videos", label: "Videos", icon: VideosIcon },
-  { href: "/podcasts", label: "Podcasts", icon: PodcastsIcon },
+  { href: "/youtube", label: "YouTube", icon: YouTubeIcon },
   { href: "/bucket", label: "Bucket list", icon: BucketIcon },
   { href: "/dont", label: "Don't do", icon: DontIcon },
   { href: "/life", label: "Life", icon: LifeIcon },

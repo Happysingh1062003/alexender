@@ -69,7 +69,7 @@ A journal that fits above the keyboard, true stories of courage, and your life c
 
 ## The map
 
-Twenty-one sections, in four families. On a phone the four you use most sit in the bottom bar; a glowing crystal orb above it opens all the rest. While you type, the bar and the orb step aside.
+Twenty sections, in four families. On a phone the four you use most sit in the bottom bar; a glowing crystal orb above it opens all the rest. While you type, the bar and the orb step aside.
 
 ```mermaid
 mindmap
@@ -90,8 +90,7 @@ mindmap
       Ideas
     Learn
       Books
-      Videos
-      Podcasts
+      YouTube
       Stories
     Reflect
       Journal
@@ -159,9 +158,7 @@ journey
 
 <tr><td><b>Books</b></td><td>Read several at once.</td><td>Page progress per book; covers found automatically; finishing asks <i>what action will you take?</i></td></tr>
 
-<tr><td><b>Videos</b></td><td>A YouTube queue.</td><td>Paste a link — title, thumbnail, length, views and date fill in.</td></tr>
-
-<tr><td><b>Podcasts</b></td><td>Episodes to listen to.</td><td>Paste a link or type a name; add a note.</td></tr>
+<tr><td><b>YouTube</b></td><td>Videos, playlists and podcasts — three tabs, one place.</td><td>Paste a video link — title, thumbnail, length, views and date fill in. Paste a playlist link — a course, a series — and its title and cover fill in; play it right there. Podcasts: a link or just a name.</td></tr>
 
 <tr><td><b>Stories</b></td><td>56 short true stories of courage.</td><td>Eleven of Alexander, then Leonidas, Caesar, Shivaji, Lakshmibai, Shackleton, Gandhi, Mandela and more — every picture a real depiction, every story sourced. Add your own.</td></tr>
 
@@ -457,7 +454,7 @@ src/
 │  ├─ page.tsx             Today
 │  ├─ habits/  workout/  timer/  skills/  learning/  questions/  calendar/
 │  ├─ mission/  goals/  plans/  ideas/
-│  ├─ journal/  books/  videos/  podcasts/  stories/  bucket/  dont/
+│  ├─ journal/  books/  youtube/  stories/  bucket/  dont/
 │  ├─ life/  settings/  login/
 │  └─ api/                 sync · images · auth · oembed
 ├─ components/             AppShell (bars, orb), dialogs, charts, lists, timer watcher
@@ -481,7 +478,7 @@ public/
 
 - **The statue** — the marble head of Alexander in the British Museum, cut from its background.
 - **Story pictures** — ancient mosaics, coins, statues, period portraits and photographs from Wikimedia Commons, credited in the app beside each story.
-- **Book covers** — Open Library. **Video details** — YouTube's public oEmbed.
+- **Book covers** — Open Library. **Video and playlist details** — YouTube's public oEmbed.
 - **Life expectancy** — UN World Population Prospects estimates, by country.
 
 <br/>

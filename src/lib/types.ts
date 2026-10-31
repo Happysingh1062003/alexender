@@ -68,6 +68,22 @@ export interface Goal {
   updatedAt?: number;
 }
 
+/** A YouTube playlist to work through — title, channel and cover fill in from the link. */
+export interface Playlist {
+  id: string;
+  url: string;
+  /** YouTube's playlist id (the `list=` part of the link). */
+  listId: string;
+  title: string;
+  channel?: string;
+  thumb?: string;
+  done: boolean;
+  completedAt?: number;
+  createdAt: number;
+  updatedAt?: number;
+  order: number;
+}
+
 export interface Video {
   id: string;
   url: string;
@@ -323,6 +339,8 @@ export interface Settings {
   country: string;
   /** Overrides the country average when set. */
   lifeExpectancy?: number;
+  /** Which tab the YouTube section opens on. */
+  youtubeTab?: "videos" | "playlists" | "podcasts";
   /** How the statue on Today is drawn: the photo, or in characters. */
   statueStyle?: "photo" | "ascii";
   /** Which picture of time the Life section shows. */

@@ -31,6 +31,20 @@ export function parseYouTubeId(input: string): string | null {
   return null;
 }
 
+/** The playlist id from a YouTube link (`…?list=PL…`), or a bare id. */
+export function parsePlaylistId(input: string): string | null {
+  const s = input.trim();
+  if (/^(PL|UU|LL|FL|OL|RD)[\w-]{8,}$/.test(s)) return s;
+  try {
+    const url = new URL(s.startsWith("http") ? s : `https://${s}`);
+    if (!/(^|\.)youtube\.com$|(^|\.)youtu\.be$|youtube-nocookie\.com$/.test(url.hostname)) return null;
+    const list = url.searchParams.get("list");
+    return list && /^[\w-]{10,64}$/.test(list) ? list : null;
+  } catch {
+    return null;
+  }
+}
+
 export const ytThumb = (id: string, size: "mq" | "hq" = "mq") => `https://i.ytimg.com/vi/${id}/${size}default.jpg`;
 
 /** "45m", "1h 20m". */

@@ -1,7 +1,7 @@
 "use client";
 
 import { useStore } from "./store";
-import { parseYouTubeId } from "./utils";
+import { parsePlaylistId, parseYouTubeId } from "./utils";
 
 export const PENDING_TITLE = "Loading title…";
 // Lookups are tried once per session; a failed one is retried the next time the app opens.
@@ -77,3 +77,29 @@ export const splitBook = (text: string) => {
   const [title, author = ""] = text.split(/\s+by\s+/i);
   return { title, author };
 };
+
+const triedPlaylists = new Set<string>();
+
+/** Title, channel and cover of a playlist, through our oEmbed proxy. */
+export async function fetchPlaylistTitle(id: string) {
+  const playlist = useStore.getState().playlists.find((p) => p.id === id);
+  if (!playlist || triedPlaylists.has(id)) return;
+  triedPlaylists.add(id);
+  try {
+    const res = await fetch(`/api/oembed?list=${encodeURIComponent(playlist.listId)}`);
+    const data = res.ok ? ((await res.json()) as { title?: string; author?: string; thumbnail?: string }) : {};
+    useStore.getState().updatePlaylist(id, { title: data.title || "Untitled playlist", channel: data.author, thumb: data.thumbnail });
+  } catch {
+    // offline — retried next session
+  }
+}
+
+/** Adds a playlist from its link; the title and cover fill in a moment later. */
+export function addPlaylistFromUrl(url: string): "added" | "invalid" | "duplicate" {
+  const listId = parsePlaylistId(url);
+  if (!listId) return "invalid";
+  if (useStore.getState().playlists.some((p) => p.listId === listId && !p.done)) return "duplicate";
+  const id = useStore.getState().addPlaylist({ url: url.trim(), listId, title: PENDING_TITLE });
+  fetchPlaylistTitle(id);
+  return "added";
+}

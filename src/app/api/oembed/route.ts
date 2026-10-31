@@ -5,6 +5,17 @@ import type { NextRequest } from "next/server";
  * plus length, views and publish date read from the public watch page when available.
  */
 export async function GET(request: NextRequest) {
+  const list = request.nextUrl.searchParams.get("list");
+  if (list !== null) {
+    if (!/^[\w-]{10,64}$/.test(list)) return Response.json({ error: "Invalid playlist" }, { status: 400 });
+    const playlistUrl = `https://www.youtube.com/playlist?list=${list}`;
+    const data = await fetch(`https://www.youtube.com/oembed?format=json&url=${encodeURIComponent(playlistUrl)}`, { signal: AbortSignal.timeout(8000) })
+      .then((r) => (r.ok ? (r.json() as Promise<{ title?: string; author_name?: string; thumbnail_url?: string }>) : null))
+      .catch(() => null);
+    if (!data) return Response.json({ error: "Not found" }, { status: 404 });
+    return Response.json({ title: data.title, author: data.author_name, thumbnail: data.thumbnail_url });
+  }
+
   const id = request.nextUrl.searchParams.get("id");
   if (!id || !/^[\w-]{11}$/.test(id)) return Response.json({ error: "Invalid id" }, { status: 400 });
   const watchUrl = `https://www.youtube.com/watch?v=${id}`;
